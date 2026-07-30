@@ -110,7 +110,7 @@ export function ScudoLogo({ size = 'md', variant = 'default', showSubtitle = tru
     <div className={`scudo-logo scudo-logo--${size} scudo-logo--${variant} ${horizontal ? 'scudo-logo--horizontal' : ''} ${markOnly ? 'scudo-logo--mark-only' : ''} ${sOnly ? 'scudo-logo--s-only' : ''} ${showShadow ? 'has-logo-shadow' : ''} ${className}`} style={style} aria-label="Scudo Clothing" role="img">
       {!sOnly && <svg className="scudo-logo__shirt" viewBox="0 0 180 150" aria-hidden="true" focusable="false"><title>Scudo Clothing shirt mark</title><defs><mask id={maskId}><rect width="180" height="150" fill="white" /><path d="M65 10Q90 42 115 10Q111 43 90 47Q69 43 65 10Z" fill="black" /></mask></defs><path d="M64 10 23 22 10 68 42 79 54 52 47 140H133L126 52 138 79 170 68 157 22 116 10C111 25 103 32 90 32S69 25 64 10Z" fill="var(--logo-accent)" mask={`url(#${maskId})`} /></svg>}
       {sOnly && <span className="scudo-logo__s">S</span>}
-      {!markOnly && !sOnly && <div className="scudo-logo__word">scudo</div>}
+      {!markOnly && !sOnly && <div className="scudo-logo__word">{'scudo'.split('').map((letter, index) => <span key={`${letter}-${index}`} className="scudo-logo__letter" style={{ '--letter-index': index }}>{letter}</span>)}</div>}
       {showSubtitle && !markOnly && !sOnly && <div className="scudo-logo__subtitle">CLOTHINGS</div>}
     </div>
   )
@@ -120,11 +120,13 @@ function BrandIntro({ onComplete }) {
   const [leaving, setLeaving] = useState(false)
   useEffect(() => {
     try { sessionStorage.setItem('scudo-intro-seen', '1') } catch {}
-    const leaveTimer = window.setTimeout(() => setLeaving(true), 1050)
-    const completeTimer = window.setTimeout(onComplete, 1750)
-    return () => { window.clearTimeout(leaveTimer); window.clearTimeout(completeTimer) }
+    document.body.classList.add('intro-active')
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const leaveTimer = window.setTimeout(() => setLeaving(true), reducedMotion ? 40 : 1660)
+    const completeTimer = window.setTimeout(onComplete, reducedMotion ? 120 : 2480)
+    return () => { window.clearTimeout(leaveTimer); window.clearTimeout(completeTimer); document.body.classList.remove('intro-active') }
   }, [])
-  return <div className={`brand-intro ${leaving ? 'brand-intro--leaving' : ''}`} aria-hidden="true"><span className="brand-intro__grid" /><span className="brand-intro__ring brand-intro__ring--one" /><span className="brand-intro__ring brand-intro__ring--two" /><ScudoLogo size="md" showSubtitle showShadow className="brand-intro__logo" /><span className="brand-intro__caption">FOOTBALL / EVERYDAY</span></div>
+  return <div className={`brand-intro ${leaving ? 'brand-intro--leaving' : ''}`} aria-hidden="true"><span className="brand-intro__wash" /><span className="brand-intro__sequence">SCUDO / 01</span><ScudoLogo size="md" showSubtitle showShadow className="brand-intro__logo" /><span className="brand-intro__caption">FOOTBALL / EVERYDAY</span></div>
 }
 
 function usePersistedState(key, initialValue) {
@@ -145,35 +147,136 @@ function useRoute() {
   return route
 }
 
+function useMotionSystem(route) {
+  useEffect(() => {
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    const root = document.documentElement
+    const motionSelector = '.hero-copy, .hero-visual, .section-heading, .product-card, .editorial-band > *, .collection-card, .story-image, .story-copy, .benefit, .newsletter > *, .shop-heading, .shop-toolbar, .shop-filters, .shop-results, .product-gallery, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
+    const updateScrollState = () => {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+      const progress = maxScroll > 0 ? Math.min(1, window.scrollY / maxScroll) : 0
+      document.body.classList.toggle('has-scrolled', window.scrollY > 18)
+      root.style.setProperty('--scroll-progress', progress.toString())
+    }
+
+    updateScrollState()
+    window.addEventListener('scroll', updateScrollState, { passive: true })
+    document.body.classList.add('motion-ready')
+
+    const elements = [...document.querySelectorAll(motionSelector)]
+    elements.forEach((element, index) => {
+      element.classList.add('motion-reveal')
+      element.style.setProperty('--motion-delay', `${Math.min(index % 8, 7) * 55}ms`)
+      if (element.matches('.hero-visual, .story-image, .collection-card, .collection-feature')) element.classList.add('motion-reveal--media')
+    })
+
+    let observer
+    if (reducedMotion || !('IntersectionObserver' in window)) {
+      elements.forEach((element) => element.classList.add('is-revealed'))
+    } else {
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-revealed')
+            observer.unobserve(entry.target)
+          }
+        })
+      }, { threshold: 0.12, rootMargin: '0px 0px -7% 0px' })
+      elements.forEach((element) => observer.observe(element))
+    }
+
+    const heroVisual = document.querySelector('.hero-visual')
+    const finePointer = window.matchMedia?.('(pointer: fine)').matches
+    const onHeroPointer = (event) => {
+      if (!heroVisual || reducedMotion || !finePointer) return
+      const bounds = heroVisual.getBoundingClientRect()
+      const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * -12
+      const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * -8
+      heroVisual.style.setProperty('--parallax-x', `${x.toFixed(2)}px`)
+      heroVisual.style.setProperty('--parallax-y', `${y.toFixed(2)}px`)
+    }
+    const resetHeroPointer = () => {
+      heroVisual?.style.setProperty('--parallax-x', '0px')
+      heroVisual?.style.setProperty('--parallax-y', '0px')
+    }
+    const closeLightbox = () => document.querySelector('.image-lightbox')?.remove()
+    const onZoomClick = (event) => {
+      const trigger = event.target.closest?.('.zoom-hint')
+      const source = trigger?.parentElement?.querySelector('img')
+      if (!source) return
+      event.preventDefault()
+      closeLightbox()
+      const lightbox = document.createElement('div')
+      lightbox.className = 'image-lightbox'
+      lightbox.setAttribute('role', 'dialog')
+      lightbox.setAttribute('aria-modal', 'true')
+      lightbox.setAttribute('aria-label', 'Product image preview')
+      const closeButton = document.createElement('button')
+      closeButton.className = 'icon-button image-lightbox__close'
+      closeButton.type = 'button'
+      closeButton.setAttribute('aria-label', 'Close image preview')
+      closeButton.textContent = '×'
+      const imageClone = source.cloneNode(true)
+      imageClone.alt = `${source.alt} enlarged view`
+      closeButton.addEventListener('click', closeLightbox)
+      lightbox.addEventListener('click', (lightboxEvent) => { if (lightboxEvent.target === lightbox) closeLightbox() })
+      lightbox.append(closeButton, imageClone)
+      document.body.append(lightbox)
+      closeButton.focus()
+    }
+    const onLightboxKeyDown = (event) => { if (event.key === 'Escape') closeLightbox() }
+    heroVisual?.addEventListener('pointermove', onHeroPointer)
+    heroVisual?.addEventListener('pointerleave', resetHeroPointer)
+    document.addEventListener('click', onZoomClick)
+    document.addEventListener('keydown', onLightboxKeyDown)
+
+    return () => {
+      window.removeEventListener('scroll', updateScrollState)
+      observer?.disconnect()
+      heroVisual?.removeEventListener('pointermove', onHeroPointer)
+      heroVisual?.removeEventListener('pointerleave', resetHeroPointer)
+      document.removeEventListener('click', onZoomClick)
+      document.removeEventListener('keydown', onLightboxKeyDown)
+      closeLightbox()
+    }
+  }, [route])
+}
+
 function navigate(path) {
-  window.history.pushState({}, '', path)
-  window.dispatchEvent(new PopStateEvent('popstate'))
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  document.body.classList.add('is-routing')
+  window.setTimeout(() => {
+    window.history.pushState({}, '', path)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    window.setTimeout(() => document.body.classList.remove('is-routing'), 320)
+  }, 120)
 }
 
 function Link({ to, children, className = '', onClick, ...props }) {
   return <a href={to} className={className} onClick={(event) => { if (!props.target) { event.preventDefault(); navigate(to) } onClick?.(event) }} {...props}>{children}</a>
 }
 
-function Header({ cartCount, wishlistCount, onCartOpen }) {
+function Header({ cartCount, wishlistCount, onCartOpen, account }) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [announcement, setAnnouncement] = usePersistedState('scudo-announcement', 'DROP 01 — THE FIRST XI')
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   useEffect(() => {
-    const closeOnEscape = (event) => event.key === 'Escape' && setMenuOpen(false)
+    const closeOnEscape = (event) => { if (event.key === 'Escape') { setMenuOpen(false); setAccountMenuOpen(false) } }
+    const closeAccountOnOutside = (event) => { if (!event.target.closest?.('.account-menu-shell')) setAccountMenuOpen(false) }
     window.addEventListener('keydown', closeOnEscape)
+    document.addEventListener('pointerdown', closeAccountOnOutside)
     document.body.classList.toggle('menu-open', menuOpen)
-    return () => { window.removeEventListener('keydown', closeOnEscape); document.body.classList.remove('menu-open') }
+    return () => { window.removeEventListener('keydown', closeOnEscape); document.removeEventListener('pointerdown', closeAccountOnOutside); document.body.classList.remove('menu-open') }
   }, [menuOpen])
   const closeMenu = () => setMenuOpen(false)
   return <>
-    <div className="announcement"><span>{announcement}</span><button onClick={() => setAnnouncement(announcement === 'DROP 01 — THE FIRST XI' ? 'MATCHDAY / EVERYDAY' : 'DROP 01 — THE FIRST XI')} aria-label="Change announcement"><Icon name="chevron" size={13} /></button></div>
     <header className="site-header">
       <div className="header-inner">
         <button className="icon-button mobile-menu-button" onClick={() => setMenuOpen(true)} aria-label="Open categories menu"><Icon name="menu" /></button>
+        <nav className="desktop-nav" aria-label="Primary navigation"><Link to="/shop?sort=featured">Bestsellers</Link><Link to="/shop?sort=newest">New arrivals</Link><Link to="/shop">Shop all</Link><Link to="/collections">Collections</Link><Link to="/about">About</Link></nav>
         <Link to="/" className="header-logo"><ScudoLogo size="sm" showSubtitle /></Link>
         <div className="header-actions">
           <Link to="/shop" className="icon-button" aria-label="Search"><Icon name="search" /></Link>
-          <Link to="/account" className="icon-button header-account" aria-label="Account"><Icon name="user" /></Link>
+          {account ? <span className="account-menu-shell"><button className={`icon-button header-account account-trigger ${accountMenuOpen ? 'is-open' : ''}`} onClick={() => setAccountMenuOpen((open) => !open)} aria-label={`Account menu for ${account.name}`} aria-haspopup="menu" aria-expanded={accountMenuOpen}><Icon name="user" /><span className="account-status-dot" /></button>{accountMenuOpen && <nav className="account-popover" aria-label="Account navigation" role="menu"><div className="account-popover__intro"><span className="eyebrow">Signed in as</span><strong>{account.name}</strong></div><Link to="/orders" role="menuitem" onClick={() => setAccountMenuOpen(false)}><span>Your orders</span><Icon name="arrow" size={15} /></Link><Link to="/settings" role="menuitem" onClick={() => setAccountMenuOpen(false)}><span>Settings</span><Icon name="arrow" size={15} /></Link><Link to="/contact" role="menuitem" onClick={() => setAccountMenuOpen(false)}><span>Support</span><Icon name="arrow" size={15} /></Link></nav>}</span> : <Link to="/account" className="icon-button header-account" aria-label="Account"><Icon name="user" /></Link>}
           <Link to="/wishlist" className="icon-button with-count" aria-label={`Wishlist, ${wishlistCount} items`}><Icon name="heart" />{wishlistCount > 0 && <span>{wishlistCount}</span>}</Link>
           <button className="icon-button with-count" onClick={onCartOpen} aria-label={`Shopping bag, ${cartCount} items`}><Icon name="bag" />{cartCount > 0 && <span>{cartCount}</span>}</button>
         </div>
@@ -190,12 +293,30 @@ function Footer({ onSubscribe }) {
   return <footer className="site-footer"><div className="footer-top"><div className="footer-brand"><ScudoLogo variant="light" size="sm" /><p>Football-inspired pieces for the 90 minutes and everything after.</p><div className="socials"><a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram"><Icon name="instagram" /></a><a href="mailto:hello@scudoclothing.com" aria-label="Email Scudo Clothing"><Icon name="mail" /></a></div></div><div className="footer-links"><div><p className="footer-label">Shop</p><Link to="/shop">All pieces</Link><Link to="/shop/jerseys">Jerseys</Link><Link to="/shop/t-shirts">T-shirts</Link><Link to="/collections">Collections</Link></div><div><p className="footer-label">Customer care</p><Link to="/size-guide">Size guide</Link><Link to="/shipping-returns">Shipping & returns</Link><Link to="/contact">Contact</Link><Link to="/account">Account</Link></div><div className="footer-signup"><p className="footer-label">The team sheet</p><p>Drop notes, new pieces, no noise.</p><form onSubmit={submit}><label className="sr-only" htmlFor="footer-email">Email address</label><input id="footer-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Your email" required /><button type="submit" aria-label="Subscribe"><Icon name="arrow" /></button></form>{sent ? <span className="form-success">You're on the list.</span> : <span className="form-note">By subscribing, you agree to our updates.</span>}</div></div></div><div className="footer-bottom"><span>© {new Date().getFullYear()} Scudo Clothing</span><div><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/admin">Store admin</Link></div><span>Made for movement.</span></div></footer>
 }
 
-function ProductCard({ product, onQuickAdd, wishlist, onToggleWishlist }) {
+function ProductCardLegacy({ product, onQuickAdd, wishlist, onToggleWishlist }) {
   const isWished = wishlist.includes(product.id)
   return <article className="product-card"><div className="product-image-wrap"><Link to={`/product/${product.slug}`} className="product-image-link"><img src={product.images[0]} alt={`${product.name} — ${product.shortDescription}`} loading="lazy" /><span className="product-status">{product.isSoldOut ? 'Sold out' : product.isNew ? 'New' : product.salePrice ? 'Sale' : 'Available'}</span></Link><WishlistButton active={isWished} onClick={() => onToggleWishlist(product.id)} /><button className="quick-add" onClick={() => onQuickAdd(product)} disabled={product.isSoldOut}>{product.isSoldOut ? 'Sold out' : 'Quick add'}<Icon name="plus" size={15} /></button></div><div className="product-meta"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link><div className="product-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><div className="product-detail-line"><span>{product.colors.join(' / ')}</span><span>{product.sizes.length} sizes</span></div></div></article>
 }
 
-function WishlistButton({ active, onClick }) { return <button className={`wishlist-button ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={active ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" size={17} /></button> }
+function ProductCard({ product, onQuickAdd, wishlist, onToggleWishlist }) {
+  const isWished = wishlist.includes(product.id)
+  const [feedback, setFeedback] = useState('idle')
+  const quickAdd = () => {
+    const result = onQuickAdd(product)
+    setFeedback(result === 'auth-required' ? 'signin' : 'added')
+    window.setTimeout(() => setFeedback('idle'), 1300)
+  }
+  const feedbackClass = feedback === 'idle' ? '' : `is-${feedback}`
+  return <article className="product-card"><div className="product-image-wrap"><Link to={`/product/${product.slug}`} className="product-image-link"><img className="product-image-main" src={product.images[0]} alt={`${product.name} product image`} loading="lazy" /><img className="product-image-secondary" src={product.images[1] || product.images[0]} alt="" aria-hidden="true" loading="lazy" /><span className="product-status">{product.isSoldOut ? 'Sold out' : product.isNew ? 'New' : product.salePrice ? 'Sale' : 'Available'}</span></Link><WishlistButton active={isWished} onClick={() => onToggleWishlist(product.id)} /><button className={`quick-add ${feedbackClass}`} onClick={quickAdd} disabled={product.isSoldOut}>{product.isSoldOut ? 'Sold out' : feedback === 'added' ? 'Added to bag' : feedback === 'signin' ? 'Sign in required' : 'Quick add'}<Icon name={feedback === 'added' ? 'check' : 'plus'} size={15} /></button></div><div className="product-meta"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link><div className="product-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><div className="product-detail-line"><span>{product.colors.join(' / ')}</span><span>{product.sizes.length} sizes</span></div></div></article>
+}
+
+function WishlistButtonLegacy({ active, onClick }) { return <button className={`wishlist-button ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={active ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" size={17} /></button> }
+
+function WishlistButton({ active, onClick }) {
+  const [bumping, setBumping] = useState(false)
+  const toggle = () => { setBumping(true); onClick(); window.setTimeout(() => setBumping(false), 480) }
+  return <button className={`wishlist-button ${active ? 'is-active' : ''} ${bumping ? 'is-bumping' : ''}`} onClick={toggle} aria-label={active ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" size={17} /></button>
+}
 
 function Breadcrumbs({ items }) { return <div className="breadcrumbs"><Link to="/">Home</Link><span>/</span>{items.map((item, index) => <span key={index} className={index === items.length - 1 ? 'current' : ''}>{item.path ? <Link to={item.path}>{item.label}</Link> : item.label}</span>)}</div> }
 
@@ -219,8 +340,13 @@ function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
 function Newsletter() {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState('idle')
-  const submit = (event) => { event.preventDefault(); setStatus(email.includes('@') ? 'success' : 'error') }
-  return <section className="newsletter"><div><span className="eyebrow">Stay in the loop</span><h2>Join the team sheet.</h2><p>Drop notes, new pieces, and the occasional good idea. No noise.</p></div><form onSubmit={submit} className="newsletter-form"><label className="sr-only" htmlFor="newsletter-email">Email address</label><input id="newsletter-email" type="email" placeholder="Email address" value={email} onChange={(e) => { setEmail(e.target.value); setStatus('idle') }} required /><button className="button button-light" type="submit">Subscribe <Icon name="arrow" size={16} /></button>{status === 'success' && <span className="form-success">You're on the list.</span>}{status === 'error' && <span className="form-error">Enter a valid email address.</span>}</form></section>
+  const submit = (event) => {
+    event.preventDefault()
+    if (!email.includes('@')) return setStatus('error')
+    setStatus('sending')
+    window.setTimeout(() => setStatus('success'), 520)
+  }
+  return <section className="newsletter"><div><span className="eyebrow">Stay in the loop</span><h2>Join the team sheet.</h2><p>Drop notes, new pieces, and the occasional good idea. No noise.</p></div><form onSubmit={submit} className={`newsletter-form ${status === 'sending' ? 'is-sending' : ''}`}><label className="sr-only" htmlFor="newsletter-email">Email address</label><input id="newsletter-email" type="email" placeholder="Email address" value={email} onChange={(e) => { setEmail(e.target.value); setStatus('idle') }} required /><button className="button button-light" type="submit" disabled={status === 'sending'}>{status === 'sending' ? 'Joining...' : 'Subscribe'} <Icon name="arrow" size={16} /></button>{status === 'success' && <span className="form-success">You're on the list.</span>}{status === 'error' && <span className="form-error">Enter a valid email address.</span>}</form></section>
 }
 
 function ShopPage({ wishlist, onToggleWishlist, onQuickAdd, initialCategory }) {
@@ -255,8 +381,20 @@ function ProductPage({ product, wishlist, onToggleWishlist, onAddToCart }) {
   const [color, setColor] = useState(product.colors[0])
   const [quantity, setQuantity] = useState(1)
   const [reviewSent, setReviewSent] = useState(false)
+  const [addState, setAddState] = useState('idle')
   const wished = wishlist.includes(product.id)
-  const add = () => size && onAddToCart(product, size, color, quantity)
+  const add = () => {
+    if (!size) {
+      setAddState('attention')
+      window.setTimeout(() => setAddState('idle'), 600)
+      return
+    }
+    setAddState('adding')
+    const result = onAddToCart(product, size, color, quantity)
+    window.setTimeout(() => setAddState(result === 'auth-required' ? 'signin' : 'added'), 360)
+    window.setTimeout(() => setAddState('idle'), 1700)
+  }
+  useEffect(() => { const button = document.querySelector('.add-to-bag'); if (button) button.dataset.status = addState }, [addState])
   return <main className="product-page"><div className="page-shell"><Breadcrumbs items={[{ label: product.category, path: `/shop/${product.category.toLowerCase().replace(' ', '-')}` }, { label: product.name }]} /><div className="product-detail"><div className="product-gallery"><div className="gallery-main"><img src={product.images[activeImage]} alt={`${product.name} view ${activeImage + 1}`} /><button className="zoom-hint" aria-label="Product image zoom">Click to zoom</button></div><div className="gallery-thumbs">{product.images.map((src, index) => <button key={src} className={activeImage === index ? 'is-active' : ''} onClick={() => setActiveImage(index)}><img src={src} alt={`${product.name} thumbnail ${index + 1}`} /></button>)}</div></div><div className="product-info"><span className="eyebrow">{product.collection} / {product.category}</span><h1>{product.name}</h1><div className="detail-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)} <span className="tax-note">incl. taxes</span></div><p className="detail-description">{product.description}</p><div className="selector-block"><div className="selector-label"><span>Colour</span><strong>{color}</strong></div><div className="swatches">{product.colors.map((item) => <button key={item} className={`swatch swatch--${item.toLowerCase().replace('-', '')} ${color === item ? 'is-selected' : ''}`} onClick={() => setColor(item)} aria-label={`Select ${item}`}><span /></button>)}</div></div><div className="selector-block"><div className="selector-label"><span>Size</span><Link to="/size-guide">Size guide <Icon name="arrow" size={13} /></Link></div><div className="size-grid">{product.sizes.map((item) => <button key={item} className={size === item ? 'is-selected' : ''} onClick={() => setSize(item)}>{item}</button>)}</div>{!size && <span className="selection-note">Select a size to add this piece.</span>}</div><div className="add-row"><div className="quantity-control"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button onClick={() => setQuantity(Math.min(product.inventory || 1, quantity + 1))} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div><button className="button button-dark add-to-bag" onClick={add} disabled={!size || product.isSoldOut}>{product.isSoldOut ? 'Sold out' : !size ? 'Select a size' : 'Add to bag'} <Icon name="arrow" size={16} /></button><button className={`icon-button detail-wishlist ${wished ? 'is-active' : ''}`} onClick={() => onToggleWishlist(product.id)} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" /></button></div><div className="detail-notes"><div><span>Shipping</span><p>Ships in 2–4 business days across India.</p></div><div><span>Returns</span><p>Easy returns within 7 days of delivery.</p></div><div><span>Details</span><p>{product.material}. {product.careInstructions}</p></div></div><div className="sku-line"><span>SKU {product.sku}</span><span>Scudo Clothing</span></div></div></div><section className="product-lower"><div><span className="eyebrow">Reviews / 03</span><h2>Worn in the wild.</h2></div><div className="review-content"><div className="review-card"><div className="stars">★★★★★</div><p>“Good weight, easy fit. It’s become the jersey I reach for even when there isn’t a game on.”</p><span>— A. Mehta / Verified buyer</span></div><form className="review-form" onSubmit={(event) => { event.preventDefault(); setReviewSent(true) }}><span className="form-title">Leave a review</span><input required placeholder="Your name" aria-label="Your name" /><textarea required placeholder="What did you think?" aria-label="Your review" rows="3" /><button className="button button-ghost" type="submit">{reviewSent ? 'Review submitted' : 'Submit review'}</button></form></div></section><section className="section related-section"><SectionHeading eyebrow="Complete the rotation" title="You may also like" /><div className="product-grid product-grid--four">{products.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} onQuickAdd={(p) => onAddToCart(p, p.sizes[0], p.colors[0], 1)} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section></div></main>
 }
 
@@ -279,12 +417,14 @@ function OrderSummary({ subtotal, shipping, tax, onCheckout, checkoutLabel = 'Ch
 function CheckoutPage({ cart, onPlaceOrder }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '', country: 'India', postal: '', payment: 'upi', terms: false })
   const [error, setError] = useState('')
+  const [placing, setPlacing] = useState(false)
   const subtotal = cart.reduce((total, item) => total + (item.product.salePrice || item.product.price) * item.quantity, 0)
   const shipping = subtotal >= 3500 || subtotal === 0 ? 0 : 150
   const tax = Math.round(subtotal * 0.05)
   const total = subtotal + shipping + tax
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }))
-  const validateAndPlace = () => { if (!form.terms) return setError('Please accept the terms and privacy policy to continue.'); if (!form.name || !form.email || !form.address || !form.city || !form.postal) return setError('Please complete the required delivery details.'); onPlaceOrder({ ...form, total, items: cart }) }
+  useEffect(() => { const button = document.querySelector('.place-order'); if (button) button.dataset.status = placing ? 'processing' : 'idle' }, [placing])
+  const validateAndPlace = () => { if (placing) return; if (!form.terms) return setError('Please accept the terms and privacy policy to continue.'); if (!form.name || !form.email || !form.address || !form.city || !form.postal) return setError('Please complete the required delivery details.'); setError(''); setPlacing(true); window.setTimeout(() => onPlaceOrder({ ...form, total, items: cart }), 700) }
   const submit = (event) => { event.preventDefault(); validateAndPlace() }
   return <main className="checkout-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Checkout' }]} /><div className="checkout-heading"><span className="eyebrow">Secure demo checkout</span><h1>Ready when you are.</h1><p>Your order is reserved in demo mode. Connect Razorpay or Stripe through the environment variables before accepting live payments.</p></div>{!cart.length ? <EmptyState title="Your bag is empty" copy="Add something before checking out." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} /> : <form className="checkout-layout" onSubmit={submit}><div className="checkout-form"><FormSection title="Contact"><div className="form-grid"><Field label="Full name" value={form.name} onChange={(v) => update('name', v)} required /><Field label="Email address" type="email" value={form.email} onChange={(v) => update('email', v)} required /><Field label="Phone number" value={form.phone} onChange={(v) => update('phone', v)} /></div></FormSection><FormSection title="Delivery address"><div className="form-grid"><Field label="Address" value={form.address} onChange={(v) => update('address', v)} required wide /><Field label="City" value={form.city} onChange={(v) => update('city', v)} required /><Field label="State" value={form.state} onChange={(v) => update('state', v)} /><Field label="Country" value={form.country} onChange={(v) => update('country', v)} /><Field label="Postal code" value={form.postal} onChange={(v) => update('postal', v)} required /></div></FormSection><FormSection title="Payment"><div className="payment-note"><span className="demo-badge">DEMO MODE</span><p>Payment credentials are not configured. This order will be marked as awaiting payment and will not charge a card.</p></div><div className="payment-options">{[['upi', 'UPI'], ['card', 'Credit / debit card'], ['netbanking', 'Net banking'], ['cod', 'Cash on delivery']].map(([value, label]) => <label key={value} className={`payment-option ${form.payment === value ? 'is-selected' : ''}`}><input type="radio" name="payment" checked={form.payment === value} onChange={() => update('payment', value)} /><span>{label}</span></label>)}</div></FormSection><label className="checkbox-row"><input type="checkbox" checked={form.terms} onChange={(e) => update('terms', e.target.checked)} /><span>I agree to the <Link to="/terms">terms</Link> and <Link to="/privacy">privacy policy</Link>.</span></label>{error && <p className="form-error form-error--block">{error}</p>}<button className="button button-dark place-order" type="submit">Place demo order <Icon name="arrow" size={16} /></button></div><OrderSummary subtotal={subtotal} shipping={shipping} tax={tax} checkoutLabel="Place order" onCheckout={validateAndPlace} /></form>}</div></main>
 }
@@ -309,14 +449,18 @@ function AuthForm({ onSuccess, compact = false }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [status, setStatus] = useState('idle')
   const submit = (event) => {
     event.preventDefault()
+    if (status === 'submitting') return
     if (mode === 'signup' && !name.trim()) return setError('Please enter your name.')
     if (!email.includes('@') || password.length < 4) return setError('Enter a valid email and a password of at least 4 characters.')
-    onSuccess({ name: name.trim() || email.split('@')[0], email: email.trim().toLowerCase() })
+    setError('')
+    setStatus('submitting')
+    window.setTimeout(() => onSuccess({ name: name.trim() || email.split('@')[0], email: email.trim().toLowerCase() }), 560)
   }
-  const switchMode = () => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }
-  return <form className={`auth-form ${compact ? 'auth-form--compact' : ''}`} onSubmit={submit}>{mode === 'signup' && <Field label="Full name" value={name} onChange={setName} autoComplete="name" required />}<Field label="Email address" type="email" value={email} onChange={setEmail} autoComplete="email" required /><Field label="Password" type="password" value={password} onChange={setPassword} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />{error && <p className="form-error form-error--block">{error}</p>}<button className="button button-dark auth-submit" type="submit">{mode === 'login' ? 'Log in' : 'Create account'} <Icon name="arrow" size={16} /></button><button className="text-link account-toggle" type="button" onClick={switchMode}>{mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Log in'}</button></form>
+  const switchMode = () => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setStatus('idle') }
+  return <form className={`auth-form auth-form--${mode} ${compact ? 'auth-form--compact' : ''} ${error ? 'has-error' : ''} ${status === 'submitting' ? 'is-submitting' : ''}`} onSubmit={submit}>{mode === 'signup' && <Field label="Full name" value={name} onChange={setName} autoComplete="name" required />}<Field label="Email address" type="email" value={email} onChange={setEmail} autoComplete="email" required /><Field label="Password" type="password" value={password} onChange={setPassword} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />{error && <p className="form-error form-error--block">{error}</p>}<button className="button button-dark auth-submit" type="submit" disabled={status === 'submitting'}>{status === 'submitting' ? 'Checking...' : mode === 'login' ? 'Log in' : 'Create account'} <Icon name="arrow" size={16} /></button><button className="text-link account-toggle" type="button" onClick={switchMode} disabled={status === 'submitting'}>{mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Log in'}</button></form>
 }
 
 function AuthGate({ onClose, onAuthenticated }) {
@@ -328,13 +472,27 @@ function AccountPage({ account, onAuthenticate, onLogout }) {
   return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">Welcome back</span><h1>Log in to your account.</h1><AuthForm onSuccess={onAuthenticate} /><p className="demo-note">Demo account mode is active. Connect Supabase or Firebase before launch.</p></div></main>
 }
 
+function OrdersPage({ account, order }) {
+  if (!account) return <main className="account-page"><div className="account-card"><span className="eyebrow">Members first</span><h1>Log in to see your orders.</h1><p className="demo-note">Your order history will appear here after you sign in.</p><Link to="/account" className="button button-dark">Log in <Icon name="arrow" size={16} /></Link></div></main>
+  return <main className="orders-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Your orders' }]} /><div className="account-page-heading"><span className="eyebrow">Your rotation</span><h1>Orders.</h1><p>Every piece you’ve added to the journey.</p></div>{order ? <article className="order-card"><div className="order-card__head"><div><span className="eyebrow">Order {order.number}</span><h2>Captured in demo mode.</h2></div><span className="status-pill">Awaiting payment</span></div><div className="order-card__meta"><div><span>Date</span><strong>{new Date(Number(order.number?.replace('SC-', '')) || Date.now()).toLocaleDateString('en-IN')}</strong></div><div><span>Ship to</span><strong>{order.city || 'Your city'}, {order.country || 'India'}</strong></div><div><span>Total</span><strong>{formatMoney(order.total || 0)}</strong></div></div><div className="order-card__items">{order.items?.map((item) => <div key={item.key || item.product.id}><img src={item.product.images[0]} alt="" /><div><strong>{item.product.name}</strong><span>{item.color} / {item.size} · Qty {item.quantity}</span></div><b>{formatMoney((item.product.salePrice || item.product.price) * item.quantity)}</b></div>)}</div></article> : <EmptyState title="No orders yet" copy="Your first Scudo order will appear here after checkout." action={<Link to="/shop" className="button button-dark">Shop the rotation <Icon name="arrow" size={16} /></Link>} />}</div></main>
+}
+
+function SettingsPage({ account }) {
+  const [saved, setSaved] = useState(false)
+  const [name, setName] = useState(account?.name || '')
+  const [email, setEmail] = useState(account?.email || '')
+  if (!account) return <main className="account-page"><div className="account-card"><span className="eyebrow">Members first</span><h1>Log in to manage settings.</h1><Link to="/account" className="button button-dark">Log in <Icon name="arrow" size={16} /></Link></div></main>
+  return <main className="settings-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Settings' }]} /><div className="account-page-heading"><span className="eyebrow">Account preferences</span><h1>Settings.</h1><p>Keep your Scudo details current.</p></div><form className="settings-card" onSubmit={(event) => { event.preventDefault(); setSaved(true); window.setTimeout(() => setSaved(false), 1800) }}><label className="field"><span>Full name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label><label className="field"><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><div className="settings-card__footer"><span className="demo-note">Demo profile settings. Connect your auth provider before launch.</span><button className="button button-dark" type="submit">{saved ? 'Saved' : 'Save changes'} <Icon name={saved ? 'check' : 'arrow'} size={16} /></button></div></form></div></main>
+}
+
 function AdminPage() { const [authed, setAuthed] = usePersistedState('scudo-admin-auth', false); const [announcement, setAnnouncement] = usePersistedState('scudo-announcement', 'DROP 01 — THE FIRST XI'); const [saved, setSaved] = useState(false); if (!authed) return <main className="account-page"><div className="account-card"><span className="eyebrow">Store admin</span><h1>Keep the team sheet current.</h1><p>Protected demo foundation for catalog, inventory, content, and order operations.</p><button className="button button-dark" onClick={() => setAuthed(true)}>Enter demo dashboard <Icon name="arrow" size={16} /></button><p className="demo-note">Demo access only. Replace this gate with your auth provider before launch.</p></div></main>; return <main className="admin-page"><div className="page-shell"><div className="admin-header"><div><span className="eyebrow">Scudo / Store admin</span><h1>Good morning, manager.</h1></div><button className="button button-ghost" onClick={() => setAuthed(false)}>Log out</button></div><div className="admin-stats">{[['Live products', products.filter((p) => !p.isSoldOut).length, 'catalog'], ['Inventory value', formatMoney(products.reduce((sum, p) => sum + p.price * p.inventory, 0)), 'at retail'], ['Low stock', products.filter((p) => p.inventory > 0 && p.inventory < 8).length, 'needs a look'], ['Orders today', 'Demo', 'connect payments']].map(([label, value, note]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div><div className="admin-grid"><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Content</span><h2>Announcement bar</h2></div><span className="status-pill">Live</span></div><p>Edit the message shown above the storefront header.</p><div className="admin-edit-row"><input value={announcement} onChange={(e) => { setAnnouncement(e.target.value); setSaved(false) }} /><button className="button button-dark" onClick={() => setSaved(true)}>Save</button></div>{saved && <span className="form-success">Saved to demo store.</span>}</section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Catalog</span><h2>Products</h2></div><Link to="/shop" className="text-link">View storefront <Icon name="arrow" size={14} /></Link></div><div className="admin-products">{products.map((product) => <div key={product.id}><img src={product.images[0]} alt="" /><span>{product.name}<small>{product.sku}</small></span><strong className={product.inventory < 8 ? 'low-stock' : ''}>{product.isSoldOut ? 'Sold out' : `${product.inventory} in stock`}</strong><button className="icon-button" aria-label={`Edit ${product.name}`}><Icon name="chevron" size={15} /></button></div>)}</div></section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Operations</span><h2>Next connections</h2></div></div><div className="admin-checklist">{['Product image storage', 'Razorpay / Stripe payments', 'Supabase authentication', 'Orders + fulfillment webhooks'].map((item, i) => <div key={item}><span className={i === 0 ? 'check is-done' : 'check'}>{i === 0 && <Icon name="check" size={13} />}</span>{item}<span className="connection-status">{i === 0 ? 'Ready for upload' : 'Not configured'}</span></div>)}</div></section></div></div></main> }
 
 export default function App() {
   const route = useRoute()
   const path = window.location.pathname
+  useMotionSystem(route)
   const [showIntro, setShowIntro] = useState(() => {
-    try { return !sessionStorage.getItem('scudo-intro-seen') } catch { return true }
+    try { return new URLSearchParams(window.location.search).has('intro') || !sessionStorage.getItem('scudo-intro-seen') } catch { return true }
   })
   const [wishlist, setWishlist] = usePersistedState('scudo-wishlist', [])
   const [cart, setCart] = usePersistedState('scudo-cart', [])
@@ -345,13 +503,13 @@ export default function App() {
   const [order, setOrder] = usePersistedState('scudo-last-order', null)
   useEffect(() => { document.title = path === '/' ? 'Scudo Clothing — Football-inspired streetwear' : `${path.replace('/', '').replaceAll('/', ' / ')} — Scudo Clothing` }, [route, path])
   const toggleWishlist = (id) => setWishlist((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
-  const addToCartNow = (product, size, color, quantity = 1) => { const key = `${product.id}-${size}-${color}`; setCart((current) => { const existing = current.find((item) => item.key === key); return existing ? current.map((item) => item.key === key ? { ...item, quantity: item.quantity + quantity } : item) : [...current, { key, product, size, color, quantity }] }); setCartOpen(true) }
-  const addToCart = (product, size, color, quantity = 1) => { if (!account) { setPendingAdd({ product, size, color, quantity }); setAuthPrompt(true); return }; addToCartNow(product, size, color, quantity) }
+  const addToCartNow = (product, size, color, quantity = 1) => { const key = `${product.id}-${size}-${color}`; setCart((current) => { const existing = current.find((item) => item.key === key); return existing ? current.map((item) => item.key === key ? { ...item, quantity: item.quantity + quantity } : item) : [...current, { key, product, size, color, quantity }] }); setCartOpen(true); return 'added' }
+  const addToCart = (product, size, color, quantity = 1) => { if (!account) { setPendingAdd({ product, size, color, quantity }); setAuthPrompt(true); return 'auth-required' }; return addToCartNow(product, size, color, quantity) }
   const authenticate = (profile) => { setAccount(profile); setAuthPrompt(false); if (pendingAdd) { addToCartNow(pendingAdd.product, pendingAdd.size, pendingAdd.color, pendingAdd.quantity); setPendingAdd(null) } }
   const closeAuthPrompt = () => { setAuthPrompt(false); setPendingAdd(null) }
   const updateQuantity = (key, quantity) => setCart((current) => quantity < 1 ? current.filter((item) => item.key !== key) : current.map((item) => item.key === key ? { ...item, quantity } : item))
   const removeCartItem = (key) => setCart((current) => current.filter((item) => item.key !== key))
-  const quickAdd = (product) => { if (!product.isSoldOut) addToCart(product, product.sizes[0], product.colors[0], 1) }
+  const quickAdd = (product) => { if (!product.isSoldOut) return addToCart(product, product.sizes[0], product.colors[0], 1); return 'sold-out' }
   const placeOrder = (data) => { const nextOrder = { ...data, number: `SC-${Date.now().toString().slice(-6)}` }; setOrder(nextOrder); setCart([]); navigate('/order-confirmation') }
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0)
   let content
@@ -372,7 +530,9 @@ export default function App() {
   else if (path === '/checkout') content = <CheckoutPage cart={cart} onPlaceOrder={placeOrder} />
   else if (path === '/order-confirmation') content = <OrderConfirmation order={order} />
   else if (path === '/account') content = <AccountPage account={account} onAuthenticate={authenticate} onLogout={() => setAccount(null)} />
+  else if (path === '/orders') content = <OrdersPage account={account} order={order} />
+  else if (path === '/settings') content = <SettingsPage account={account} />
   else if (path === '/admin') content = <AdminPage />
   else content = <InfoPage type="about" />
-  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><Header cartCount={cartCount} wishlistCount={wishlist.length} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
+  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><span className="scroll-progress" aria-hidden="true" /><Header cartCount={cartCount} wishlistCount={wishlist.length} account={account} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
 }
