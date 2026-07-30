@@ -1,79 +1,137 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 
-const image = (id) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=82`
+const catalogImages = (slug, count) => Array.from({ length: count }, (_, index) => `/catalog/${slug}/${String(index + 1).padStart(2, '0')}.webp`)
+
+const jerseyDefaults = {
+  category: 'Jerseys',
+  currency: 'INR',
+  brand: 'Scudo Clothing',
+  sizes: ['S', 'M', 'L', 'XL', 'XXL'],
+  material: 'Breathable performance polyester',
+  careInstructions: 'Cold wash inside out. Air dry in shade.',
+  isSoldOut: false
+}
 
 export const products = [
   {
-    id: 'scudo-noir-crest', name: 'Scudo Noir Crest Jersey', slug: 'scudo-noir-crest-jersey',
-    description: 'A considered matchday layer with a relaxed fit, contrast piping, and a soft hand feel that moves easily beyond the pitch.',
-    shortDescription: 'Black matchday jersey with sand contrast detail.', category: 'Jerseys', collection: 'Drop 01',
-    price: 2490, salePrice: null, currency: 'INR', sku: 'SC-JER-N01', brand: 'Scudo Clothing', colors: ['Noir', 'Sand'], sizes: ['S', 'M', 'L', 'XL'], inventory: 18,
-    images: [image('photo-1521572163474-6864f9cf17ab'), image('photo-1551488831-00ddcb6c6bd3')], material: '220 GSM cotton jersey', careInstructions: 'Cold wash inside out. Do not tumble dry.', isNew: true, isFeatured: true, isSoldOut: false,
-    seoTitle: 'Scudo Noir Crest Jersey', seoDescription: 'The first Scudo Clothing matchday jersey in Noir.'
+    ...jerseyDefaults,
+    id: 'argentina-champions-home', name: 'Argentina Champions Home Jersey', slug: 'argentina-champions-home-jersey',
+    description: 'The iconic sky-blue and white home shirt, finished with the champions badge and gold crest details.',
+    shortDescription: 'Champions-edition Argentina home jersey.', collection: 'Master Version', edits: ['new-arrivals', 'master-version'],
+    price: 2799, salePrice: null, sku: 'SC-ARG-M01', colors: ['Sky blue', 'White'], inventory: 17,
+    images: catalogImages('argentina-champions-home', 6), isNew: true, isFeatured: false
   },
   {
-    id: 'mint-motion', name: 'Scudo Mint Motion Jersey', slug: 'scudo-mint-motion-jersey',
-    description: 'A cool-toned jersey cut for warm evenings and late kick-offs. Clean lines, dropped shoulders, and room where it counts.',
-    shortDescription: 'Mint green jersey with an easy everyday fit.', category: 'Jerseys', collection: 'Motion Study',
-    price: 2690, salePrice: null, currency: 'INR', sku: 'SC-JER-M02', brand: 'Scudo Clothing', colors: ['Mint', 'Off-white'], sizes: ['S', 'M', 'L', 'XL'], inventory: 11,
-    images: [image('photo-1562157873-818bc0726f68'), image('photo-1503341504253-dff4815485f1')], material: '240 GSM cotton-poly blend', careInstructions: 'Cold wash with similar colours. Air dry.', isNew: true, isFeatured: true, isSoldOut: false,
-    seoTitle: 'Scudo Mint Motion Jersey', seoDescription: 'A cool-toned Scudo Clothing jersey for city movement.'
+    ...jerseyDefaults,
+    id: 'brazil-home', name: 'Brazil 2024/25 Home Jersey', slug: 'brazil-2024-25-home-jersey',
+    description: 'A vivid yellow Brazil home shirt with green trim, a clean V-neck construction, and a lightweight match-ready feel.',
+    shortDescription: 'Brazil yellow home jersey with green trim.', collection: 'Master Version', edits: ['bestsellers', 'master-version'],
+    price: 2499, salePrice: null, sku: 'SC-BRA-M02', colors: ['Yellow', 'Green'], inventory: 24,
+    images: catalogImages('brazil-home', 7), isNew: false, isFeatured: true
   },
   {
-    id: 'away-tee', name: 'Away Day Heavy Tee', slug: 'away-day-heavy-tee',
-    description: 'A substantial everyday tee with a boxy silhouette and an understated front mark. Designed to wear, re-wear, and live in.',
-    shortDescription: 'Heavyweight off-white tee with a boxy fit.', category: 'T-Shirts', collection: 'Everyday Uniform',
-    price: 1490, salePrice: null, currency: 'INR', sku: 'SC-TEE-A03', brand: 'Scudo Clothing', colors: ['Off-white'], sizes: ['S', 'M', 'L', 'XL', 'XXL'], inventory: 28,
-    images: [image('photo-1523381210434-271e8be1f52b'), image('photo-1485230895905-ec40ba36b9bc')], material: '260 GSM combed cotton', careInstructions: 'Wash at 30°C. Wash and iron inside out.', isNew: false, isFeatured: true, isSoldOut: false,
-    seoTitle: 'Away Day Heavy Tee', seoDescription: 'A heavyweight everyday tee by Scudo Clothing.'
+    ...jerseyDefaults,
+    id: 'brazil-blue-away', name: 'Brazil Blue Away Football Kit', slug: 'brazil-blue-away-football-kit',
+    description: 'A deep navy Brazil away shirt with electric blue movement, gold details, and a bold modern graphic.',
+    shortDescription: 'Brazil navy away kit with electric blue pattern.', collection: 'Master Version', edits: ['master-version', 'affordable-kits'],
+    price: 1799, salePrice: 1499, sku: 'SC-BRA-A03', colors: ['Navy', 'Royal blue'], inventory: 21,
+    images: catalogImages('brazil-blue-away', 7), isNew: false, isFeatured: false
   },
   {
-    id: 'touchline-tee', name: 'Touchline Script Tee', slug: 'touchline-script-tee',
-    description: 'A softer-weight tee for the hours around the game, with a loose drape and a hand-drawn graphic treatment.',
-    shortDescription: 'Soft sand tee with a relaxed drape.', category: 'T-Shirts', collection: 'Matchday',
-    price: 1290, salePrice: 990, currency: 'INR', sku: 'SC-TEE-T04', brand: 'Scudo Clothing', colors: ['Sand'], sizes: ['S', 'M', 'L', 'XL'], inventory: 7,
-    images: [image('photo-1503342217505-b0a15ec3261c'), image('photo-1529139574466-a303027c1d8b')], material: '200 GSM cotton jersey', careInstructions: 'Cold wash. Do not iron directly on print.', isNew: false, isFeatured: false, isSoldOut: false,
-    seoTitle: 'Touchline Script Tee', seoDescription: 'A soft sand everyday tee from the Scudo Matchday collection.'
+    ...jerseyDefaults,
+    id: 'barcelona-player-home', name: 'FC Barcelona Home Player Jersey', slug: 'fc-barcelona-home-player-jersey',
+    description: 'A player-cut Barcelona home shirt with engineered red and navy graphics and a close, athletic silhouette.',
+    shortDescription: 'Barcelona home jersey in player construction.', collection: 'Master Version', edits: ['new-arrivals', 'master-version'],
+    price: 2899, salePrice: null, sku: 'SC-FCB-M04', colors: ['Navy', 'Crimson'], inventory: 13,
+    images: catalogImages('barcelona-player-home', 6), material: 'Engineered performance mesh', isNew: true, isFeatured: false
   },
   {
-    id: 'stadium-overshirt', name: 'Stadium Overshirt', slug: 'stadium-overshirt',
-    description: 'A lightweight overshirt that holds its shape over a tee and under a jacket. Quiet utility for changing weather.',
-    shortDescription: 'Structured charcoal overshirt with utility pockets.', category: 'Outerwear', collection: 'Drop 01',
-    price: 3290, salePrice: null, currency: 'INR', sku: 'SC-OUT-S05', brand: 'Scudo Clothing', colors: ['Charcoal'], sizes: ['M', 'L', 'XL'], inventory: 5,
-    images: [image('photo-1515886657613-9f3515b0c78f'), image('photo-1490481651871-ab68de25d43d')], material: 'Cotton ripstop', careInstructions: 'Gentle wash. Hang dry.', isNew: true, isFeatured: true, isSoldOut: false,
-    seoTitle: 'Stadium Overshirt', seoDescription: 'The Scudo Clothing Stadium Overshirt in charcoal.'
+    ...jerseyDefaults,
+    id: 'france-away', name: 'France 2024 Away Jersey', slug: 'france-2024-away-jersey',
+    description: 'A pale mint France away jersey with orange crest accents and a quiet, fashion-forward colour story.',
+    shortDescription: 'France away jersey in pale mint.', collection: 'Master Version', edits: ['new-arrivals', 'master-version'],
+    price: 2599, salePrice: null, sku: 'SC-FRA-A05', colors: ['Mint', 'White'], inventory: 16,
+    images: catalogImages('france-away', 5), isNew: true, isFeatured: false
   },
   {
-    id: 'first-xi-cap', name: 'First XI Cap', slug: 'first-xi-cap',
-    description: 'An everyday six-panel with a low profile and a tonal embroidered mark. The finishing piece for the first drop.',
-    shortDescription: 'Tonal six-panel cap with an easy low profile.', category: 'Accessories', collection: 'Drop 01',
-    price: 990, salePrice: null, currency: 'INR', sku: 'SC-ACC-F06', brand: 'Scudo Clothing', colors: ['Noir', 'Sand'], sizes: ['One size'], inventory: 0,
-    images: [image('photo-1521369909029-2afed882baee'), image('photo-1588850561407-ed78c282e89b')], material: 'Brushed cotton twill', careInstructions: 'Spot clean only.', isNew: false, isFeatured: false, isSoldOut: true,
-    seoTitle: 'First XI Cap', seoDescription: 'The First XI Cap from Scudo Clothing.'
+    ...jerseyDefaults,
+    id: 'france-home', name: 'France 2024/25 Home Jersey', slug: 'france-2024-25-home-jersey',
+    description: 'A deep blue France home jersey with a crisp white collar, gold marks, and tonal diagonal texture.',
+    shortDescription: 'France blue home jersey with white collar.', collection: 'Master Version', edits: ['bestsellers', 'master-version'],
+    price: 2499, salePrice: null, sku: 'SC-FRA-H06', colors: ['Blue', 'White'], inventory: 20,
+    images: catalogImages('france-home', 7), isNew: false, isFeatured: true
+  },
+  {
+    ...jerseyDefaults,
+    id: 'portugal-away', name: 'Portugal 2026 Away Player Jersey', slug: 'portugal-2026-away-player-jersey',
+    description: 'A fresh mint-and-white Portugal away shirt with expressive brushwork and an athletic player-version fit.',
+    shortDescription: 'Portugal mint away jersey in player fit.', collection: 'Player Version', edits: ['bestsellers', 'player-version'],
+    price: 2899, salePrice: null, sku: 'SC-POR-A07', colors: ['Mint', 'White'], inventory: 12,
+    images: catalogImages('portugal-away', 5), material: 'Ultra-light performance mesh', isNew: false, isFeatured: true
+  },
+  {
+    ...jerseyDefaults,
+    id: 'portugal-black-special', name: 'Portugal Black Special Edition Jersey', slug: 'portugal-black-special-edition-jersey',
+    description: 'A black-on-black Portugal special edition finished with antique gold marks and precise red-green trim.',
+    shortDescription: 'Portugal black anniversary special edition.', collection: 'Master Version', edits: ['master-version'],
+    price: 2699, salePrice: null, sku: 'SC-POR-B08', colors: ['Black', 'Gold'], inventory: 9,
+    images: catalogImages('portugal-black-special', 6), material: 'Jacquard performance polyester', isNew: false, isFeatured: true
+  },
+  {
+    ...jerseyDefaults,
+    id: 'portugal-home-kit', name: 'Portugal Home Jersey Kit', slug: 'portugal-home-jersey-kit',
+    description: 'A confident red Portugal home shirt with green edging and subtle tonal waves across the body.',
+    shortDescription: 'Portugal red home kit with green trim.', collection: 'Master Version', edits: ['master-version', 'affordable-kits'],
+    price: 1699, salePrice: 1399, sku: 'SC-POR-H09', colors: ['Red', 'Green'], inventory: 27,
+    images: catalogImages('portugal-home-kit', 6), isNew: false, isFeatured: false
+  },
+  {
+    ...jerseyDefaults,
+    id: 'real-madrid-home', name: 'Real Madrid 2024/25 Home Player Jersey', slug: 'real-madrid-2024-25-home-player-jersey',
+    description: 'A clean white Real Madrid home shirt with deep green trim and a streamlined player-version construction.',
+    shortDescription: 'Real Madrid white home jersey in player fit.', collection: 'Player Version', edits: ['player-version'],
+    price: 2999, salePrice: null, sku: 'SC-RMA-H10', colors: ['White', 'Deep green'], inventory: 14,
+    images: catalogImages('real-madrid-home', 5), material: 'Authentic performance knit', isNew: false, isFeatured: false
+  },
+  {
+    ...jerseyDefaults,
+    id: 'spain-home', name: 'Spain 2024/25 Home Player Jersey', slug: 'spain-2024-25-home-player-jersey',
+    description: 'A saturated red Spain home shirt with navy sleeves, gold pinstripes, and a lightweight athletic shape.',
+    shortDescription: 'Spain red home jersey with navy sleeves.', collection: 'Player Version', edits: ['player-version'],
+    price: 2699, salePrice: null, sku: 'SC-ESP-H11', colors: ['Red', 'Navy'], inventory: 18,
+    images: catalogImages('spain-home', 5), material: 'Lightweight performance mesh', isNew: false, isFeatured: false
   }
 ]
 
 const collections = [
-  { title: 'Jerseys', eyebrow: '01 / Matchday', copy: 'Built for the 90 minutes.', image: image('photo-1521572163474-6864f9cf17ab'), path: '/shop/jerseys', tone: 'ink' },
-  { title: 'Matchday', eyebrow: '02 / Before & after', copy: 'The pieces around the game.', image: image('photo-1515886657613-9f3515b0c78f'), path: '/collections?name=matchday', tone: 'sand' },
-  { title: 'Everyday Uniform', eyebrow: '03 / Daily rotation', copy: 'Good enough for every day.', image: image('photo-1523381210434-271e8be1f52b'), path: '/collections?name=everyday', tone: 'cream' }
+  { title: 'Master Version', eyebrow: '01 / Matchday standard', copy: 'Detailed builds for the full ninety.', image: catalogImages('brazil-home', 1)[0], path: '/shop?edit=master-version', tone: 'ink' },
+  { title: 'Player Version', eyebrow: '02 / Lightweight', copy: 'Athletic cuts made for movement.', image: catalogImages('real-madrid-home', 1)[0], path: '/shop?edit=player-version', tone: 'sand' },
+  { title: 'Affordable Kits', eyebrow: '03 / Easy rotation', copy: 'Strong shirts at an easier price.', image: catalogImages('brazil-blue-away', 1)[0], path: '/shop?edit=affordable-kits', tone: 'cream' }
 ]
 
 const menuCards = [
-  { label: 'Matchday', path: '/shop/jerseys', image: image('photo-1521572163474-6864f9cf17ab') },
-  { label: 'Everyday', path: '/shop/t-shirts', image: image('photo-1523381210434-271e8be1f52b') },
-  { label: 'Drop 01', path: '/collections', image: image('photo-1515886657613-9f3515b0c78f') },
-  { label: 'The story', path: '/about', image: image('photo-1529139574466-a303027c1d8b') }
+  { label: 'New arrivals', path: '/shop?edit=new-arrivals', image: catalogImages('argentina-champions-home', 1)[0] },
+  { label: 'Player version', path: '/shop?edit=player-version', image: catalogImages('portugal-away', 1)[0] },
+  { label: 'Master version', path: '/shop?edit=master-version', image: catalogImages('france-home', 1)[0] },
+  { label: 'Affordable kits', path: '/shop?edit=affordable-kits', image: catalogImages('portugal-home-kit', 1)[0] }
 ]
 
 const menuCategories = [
-  { label: 'Bestsellers', path: '/shop?sort=featured', note: 'The starting XI' },
-  { label: 'New arrivals', path: '/shop?sort=newest', note: 'Just in' },
+  { label: 'Bestsellers', path: '/shop?edit=bestsellers', note: 'The starting XI' },
+  { label: 'New arrivals', path: '/shop?edit=new-arrivals', note: 'Just in' },
   { label: 'Shop all', path: '/shop', note: 'The full rotation' },
-  { label: 'Master version', path: '/collections?name=master-version', note: 'Matchday standard' },
-  { label: 'Player version', path: '/collections?name=player-version', note: 'Lightweight energy' },
-  { label: 'Affordable kits', path: '/shop?sort=price-low', note: 'Easy on the wallet' }
+  { label: 'Master version', path: '/shop?edit=master-version', note: 'Matchday standard' },
+  { label: 'Player version', path: '/shop?edit=player-version', note: 'Lightweight energy' },
+  { label: 'Affordable kits', path: '/shop?edit=affordable-kits', note: 'Easy on the wallet' }
 ]
+
+const catalogEditLabels = {
+  bestsellers: 'Bestsellers',
+  'new-arrivals': 'New arrivals',
+  'master-version': 'Master version',
+  'player-version': 'Player version',
+  'affordable-kits': 'Affordable kits'
+}
 
 const formatMoney = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)
 
@@ -272,7 +330,7 @@ function Header({ cartCount, wishlistCount, onCartOpen, account }) {
     <header className="site-header">
       <div className="header-inner">
         <button className="icon-button mobile-menu-button" onClick={() => setMenuOpen(true)} aria-label="Open categories menu"><Icon name="menu" /></button>
-        <nav className="desktop-nav" aria-label="Primary navigation"><Link to="/shop?sort=featured">Bestsellers</Link><Link to="/shop?sort=newest">New arrivals</Link><Link to="/shop">Shop all</Link><Link to="/collections">Collections</Link><Link to="/about">About</Link></nav>
+        <nav className="desktop-nav" aria-label="Primary navigation"><Link to="/shop?edit=bestsellers">Bestsellers</Link><Link to="/shop?edit=new-arrivals">New arrivals</Link><Link to="/shop">Shop all</Link><Link to="/collections">Collections</Link><Link to="/about">About</Link></nav>
         <Link to="/" className="header-logo"><ScudoLogo size="sm" showSubtitle /></Link>
         <div className="header-actions">
           <Link to="/shop" className="icon-button" aria-label="Search"><Icon name="search" /></Link>
@@ -325,13 +383,14 @@ function SectionHeading({ eyebrow, title, copy, action }) { return <div classNam
 function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
   const featured = products.filter((p) => p.isFeatured)
   const arrivals = products.filter((p) => p.isNew)
+  const heroProduct = products.find((product) => product.id === 'portugal-black-special') || products[0]
   return <main>
-    <section className="hero"><div className="hero-copy"><span className="eyebrow">Scudo Clothing / Drop 01</span><h1>Built for the<br /><em>90 minutes</em><br />and everything after.</h1><p>Football-inspired pieces made for match days, city nights, and everyday movement.</p><div className="button-row"><Link to="/shop?sort=newest" className="button button-dark">Shop new arrivals <Icon name="arrow" size={16} /></Link><Link to="/shop/jerseys" className="button button-ghost">Explore jerseys</Link></div><div className="hero-note"><span className="hero-note-dot" /> The first team sheet is now live</div></div><div className="hero-visual"><img src={products[0].images[0]} alt="Scudo Noir Crest Jersey editorial product image" /><div className="hero-stamp"><span>SC</span><span>01 / 11</span></div><div className="hero-caption"><span>Scudo Noir Crest Jersey</span><span>02.26 — Drop 01</span></div></div></section>
+    <section className="hero"><div className="hero-copy"><span className="eyebrow">Scudo Clothing / The international edit</span><h1>Built for the<br /><em>90 minutes</em><br />and everything after.</h1><p>Football-inspired pieces made for match days, city nights, and everyday movement.</p><div className="button-row"><Link to="/shop?edit=new-arrivals" className="button button-dark">Shop new arrivals <Icon name="arrow" size={16} /></Link><Link to="/shop/jerseys" className="button button-ghost">Explore jerseys</Link></div><div className="hero-note"><span className="hero-note-dot" /> Eleven shirts are now in the rotation</div></div><div className="hero-visual"><img src={heroProduct.images[0]} alt={`${heroProduct.name} editorial product image`} /><div className="hero-stamp"><span>SC</span><span>01 / 11</span></div><div className="hero-caption"><span>{heroProduct.name}</span><span>International edit / 2026</span></div></div></section>
     <section className="section section-featured"><SectionHeading eyebrow="The starting XI" title="Pieces in play" copy="The ones we reach for first." action={<Link to="/shop" className="text-link">View all <Icon name="arrow" size={15} /></Link>} /><div className="product-grid product-grid--four">{featured.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section>
     <section className="editorial-band"><div><span className="eyebrow">A note from the touchline</span><h2>Everyday uniform,<br /><em>matchday energy.</em></h2></div><p>Scudo is a study in the pieces around the game — the warm-up, the walk home, the long conversations after full time.</p><Link to="/about" className="circle-link" aria-label="Read the Scudo story"><Icon name="arrow" size={22} /></Link></section>
-    <section className="section new-arrivals"><SectionHeading eyebrow="Just in" title="New arrivals" copy="First out of the tunnel." action={<Link to="/shop?sort=newest" className="text-link">Shop all <Icon name="arrow" size={15} /></Link>} /><div className="product-row">{arrivals.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section>
+    <section className="section new-arrivals"><SectionHeading eyebrow="Just in" title="New arrivals" copy="First out of the tunnel." action={<Link to="/shop?edit=new-arrivals" className="text-link">Shop all <Icon name="arrow" size={15} /></Link>} /><div className="product-row">{arrivals.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section>
     <section className="section collection-section"><SectionHeading eyebrow="Choose your rotation" title="Collections" copy="Three ways to wear the game." /><div className="collection-grid">{collections.map((collection) => <Link to={collection.path} className={`collection-card collection-card--${collection.tone}`} key={collection.title}><img src={collection.image} alt={`${collection.title} collection`} loading="lazy" /><div className="collection-overlay"><span className="eyebrow">{collection.eyebrow}</span><h3>{collection.title}</h3><span className="collection-copy">{collection.copy}</span><span className="circle-link circle-link--small"><Icon name="arrow" size={17} /></span></div></Link>)}</div></section>
-    <section className="story-section"><div className="story-image"><img src={image('photo-1506629905607-d9b1f1ecf7ba')} alt="Scudo Clothing editorial detail" loading="lazy" /></div><div className="story-copy"><span className="eyebrow">The Scudo idea</span><h2>Not a kit.<br /><em>A point of view.</em></h2><p>Scudo Clothing brings the codes of football into the everyday — considered fabrics, easy silhouettes, and the confidence to wear your colours your way.</p><Link to="/about" className="text-link">Read our story <Icon name="arrow" size={15} /></Link><div className="story-aside"><span>01</span><span>Football culture,<br />translated for daily life.</span></div></div></section>
+    <section className="story-section"><div className="story-image"><img src={products.find((product) => product.id === 'france-away')?.images[0]} alt="France away jersey editorial detail" loading="lazy" /></div><div className="story-copy"><span className="eyebrow">The Scudo idea</span><h2>Not a kit.<br /><em>A point of view.</em></h2><p>Scudo Clothing brings the codes of football into the everyday — considered fabrics, easy silhouettes, and the confidence to wear your colours your way.</p><Link to="/about" className="text-link">Read our story <Icon name="arrow" size={15} /></Link><div className="story-aside"><span>01</span><span>Football culture,<br />translated for daily life.</span></div></div></section>
     <section className="benefits-section"><div className="benefit-intro"><span className="eyebrow">The fine print</span><h2>Good pieces<br /><em>make good days.</em></h2></div><div className="benefit-grid">{[['01', 'Quality-first pieces', 'Thoughtful materials, made to be worn often.'], ['02', 'Comfortable everyday fit', 'Relaxed proportions for movement beyond the pitch.'], ['03', 'Limited-release collections', 'Small runs, considered drops, no unnecessary noise.'], ['04', 'Easy returns', 'Changed your mind? We keep the process straightforward.']].map(([number, title, copy]) => <div className="benefit" key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></div>)}</div></section>
     <Newsletter />
   </main>
@@ -351,24 +410,27 @@ function Newsletter() {
 
 function ShopPage({ wishlist, onToggleWishlist, onQuickAdd, initialCategory }) {
   const params = new URLSearchParams(window.location.search)
+  const edit = params.get('edit')
+  const pageTitle = initialCategory || catalogEditLabels[edit] || 'Shop all'
   const [search, setSearch] = useState(params.get('q') || '')
   const [category, setCategory] = useState(initialCategory || 'All')
   const [size, setSize] = useState('All sizes')
   const [color, setColor] = useState('All colours')
   const [sort, setSort] = useState(params.get('sort') || 'featured')
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const categories = ['All', 'Jerseys', 'T-Shirts', 'Outerwear', 'Accessories']
+  const categories = ['All', ...new Set(products.map((product) => product.category))]
   const sizes = ['All sizes', 'S', 'M', 'L', 'XL', 'XXL']
-  const colors = ['All colours', 'Noir', 'Sand', 'Mint', 'Off-white', 'Charcoal']
+  const colors = ['All colours', ...new Set(products.flatMap((product) => product.colors))]
   const filtered = useMemo(() => products.filter((product) => {
-    const matchesSearch = `${product.name} ${product.description}`.toLowerCase().includes(search.toLowerCase())
+    const matchesEdit = !edit || product.edits?.includes(edit)
+    const matchesSearch = `${product.name} ${product.description} ${product.collection}`.toLowerCase().includes(search.toLowerCase())
     const matchesCategory = category === 'All' || product.category === category
     const matchesSize = size === 'All sizes' || product.sizes.includes(size)
     const matchesColor = color === 'All colours' || product.colors.includes(color)
-    return matchesSearch && matchesCategory && matchesSize && matchesColor
-  }).sort((a, b) => sort === 'newest' ? Number(b.isNew) - Number(a.isNew) : sort === 'price-low' ? (a.salePrice || a.price) - (b.salePrice || b.price) : sort === 'price-high' ? (b.salePrice || b.price) - (a.salePrice || a.price) : Number(b.isFeatured) - Number(a.isFeatured)), [search, category, size, color, sort])
-  const clear = () => { setSearch(''); setCategory('All'); setSize('All sizes'); setColor('All colours'); setSort('featured') }
-  return <main className="shop-page"><div className="page-shell"><Breadcrumbs items={[{ label: initialCategory || 'Shop' }]} /><div className="shop-heading"><div><span className="eyebrow">The full rotation</span><h1>{initialCategory || 'Shop all'}</h1></div><p>Pieces to take you from kick-off to last call.</p></div><div className="shop-toolbar"><button className="filter-trigger" onClick={() => setFiltersOpen(true)}><Icon name="filter" size={16} /> Filters</button><span className="product-count">{filtered.length} pieces</span><div className="sort-select"><label htmlFor="sort">Sort by</label><select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="newest">Newest</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option></select><Icon name="chevron" size={14} /></div></div><div className="shop-layout"><aside className={`shop-filters ${filtersOpen ? 'is-open' : ''}`}><div className="filters-head"><span>Filter the rotation</span><button className="icon-button" onClick={() => setFiltersOpen(false)} aria-label="Close filters"><Icon name="close" /></button></div><label className="filter-search"><span>Search</span><div><Icon name="search" size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search pieces" /></div></label><FilterGroup label="Category" options={categories} value={category} onChange={setCategory} /><FilterGroup label="Size" options={sizes} value={size} onChange={setSize} /><FilterGroup label="Colour" options={colors} value={color} onChange={setColor} /><button className="text-link clear-filter" onClick={clear}>Clear filters</button><button className="button button-dark filter-done" onClick={() => setFiltersOpen(false)}>View {filtered.length} pieces</button></aside>{filtersOpen && <div className="filter-backdrop" onClick={() => setFiltersOpen(false)} />}<div className="shop-results">{filtered.length ? <div className="product-grid product-grid--three">{filtered.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Nothing in this formation" copy="Try a different filter or clear the rotation to see every piece." action={<button className="button button-dark" onClick={clear}>Clear filters</button>} />}</div></div></div></main>
+    return matchesEdit && matchesSearch && matchesCategory && matchesSize && matchesColor
+  }).sort((a, b) => sort === 'newest' ? Number(b.isNew) - Number(a.isNew) : sort === 'price-low' ? (a.salePrice || a.price) - (b.salePrice || b.price) : sort === 'price-high' ? (b.salePrice || b.price) - (a.salePrice || a.price) : Number(b.isFeatured) - Number(a.isFeatured)), [search, category, size, color, sort, edit])
+  const clear = () => { setSearch(''); setCategory(initialCategory || 'All'); setSize('All sizes'); setColor('All colours'); setSort('featured') }
+  return <main className="shop-page"><div className="page-shell"><Breadcrumbs items={[{ label: pageTitle }]} /><div className="shop-heading"><div><span className="eyebrow">{edit ? 'Curated team sheet' : 'The full rotation'}</span><h1>{pageTitle}</h1></div><p>Official Scudo product photography, organised for quick discovery.</p></div><div className="shop-toolbar"><button className="filter-trigger" onClick={() => setFiltersOpen(true)}><Icon name="filter" size={16} /> Filters</button><span className="product-count">{filtered.length} pieces</span><div className="sort-select"><label htmlFor="sort">Sort by</label><select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="newest">Newest</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option></select><Icon name="chevron" size={14} /></div></div><div className="shop-layout"><aside className={`shop-filters ${filtersOpen ? 'is-open' : ''}`}><div className="filters-head"><span>Filter the rotation</span><button className="icon-button" onClick={() => setFiltersOpen(false)} aria-label="Close filters"><Icon name="close" /></button></div><label className="filter-search"><span>Search</span><div><Icon name="search" size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search pieces" /></div></label><FilterGroup label="Category" options={categories} value={category} onChange={setCategory} /><FilterGroup label="Size" options={sizes} value={size} onChange={setSize} /><FilterGroup label="Colour" options={colors} value={color} onChange={setColor} /><button className="text-link clear-filter" onClick={clear}>Clear filters</button><button className="button button-dark filter-done" onClick={() => setFiltersOpen(false)}>View {filtered.length} pieces</button></aside>{filtersOpen && <div className="filter-backdrop" onClick={() => setFiltersOpen(false)} />}<div className="shop-results">{filtered.length ? <div className="product-grid product-grid--three">{filtered.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Nothing in this formation" copy="Try a different filter or clear the rotation to see every piece." action={<button className="button button-dark" onClick={clear}>Clear filters</button>} />}</div></div></div></main>
 }
 
 function FilterGroup({ label, options, value, onChange }) { return <fieldset className="filter-group"><legend>{label}</legend>{options.map((option) => <label key={option} className="radio-row"><input type="radio" name={label} checked={value === option} onChange={() => onChange(option)} /><span>{option}</span><i /></label>)}</fieldset> }
@@ -395,7 +457,7 @@ function ProductPage({ product, wishlist, onToggleWishlist, onAddToCart }) {
     window.setTimeout(() => setAddState('idle'), 1700)
   }
   useEffect(() => { const button = document.querySelector('.add-to-bag'); if (button) button.dataset.status = addState }, [addState])
-  return <main className="product-page"><div className="page-shell"><Breadcrumbs items={[{ label: product.category, path: `/shop/${product.category.toLowerCase().replace(' ', '-')}` }, { label: product.name }]} /><div className="product-detail"><div className="product-gallery"><div className="gallery-main"><img src={product.images[activeImage]} alt={`${product.name} view ${activeImage + 1}`} /><button className="zoom-hint" aria-label="Product image zoom">Click to zoom</button></div><div className="gallery-thumbs">{product.images.map((src, index) => <button key={src} className={activeImage === index ? 'is-active' : ''} onClick={() => setActiveImage(index)}><img src={src} alt={`${product.name} thumbnail ${index + 1}`} /></button>)}</div></div><div className="product-info"><span className="eyebrow">{product.collection} / {product.category}</span><h1>{product.name}</h1><div className="detail-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)} <span className="tax-note">incl. taxes</span></div><p className="detail-description">{product.description}</p><div className="selector-block"><div className="selector-label"><span>Colour</span><strong>{color}</strong></div><div className="swatches">{product.colors.map((item) => <button key={item} className={`swatch swatch--${item.toLowerCase().replace('-', '')} ${color === item ? 'is-selected' : ''}`} onClick={() => setColor(item)} aria-label={`Select ${item}`}><span /></button>)}</div></div><div className="selector-block"><div className="selector-label"><span>Size</span><Link to="/size-guide">Size guide <Icon name="arrow" size={13} /></Link></div><div className="size-grid">{product.sizes.map((item) => <button key={item} className={size === item ? 'is-selected' : ''} onClick={() => setSize(item)}>{item}</button>)}</div>{!size && <span className="selection-note">Select a size to add this piece.</span>}</div><div className="add-row"><div className="quantity-control"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button onClick={() => setQuantity(Math.min(product.inventory || 1, quantity + 1))} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div><button className="button button-dark add-to-bag" onClick={add} disabled={!size || product.isSoldOut}>{product.isSoldOut ? 'Sold out' : !size ? 'Select a size' : 'Add to bag'} <Icon name="arrow" size={16} /></button><button className={`icon-button detail-wishlist ${wished ? 'is-active' : ''}`} onClick={() => onToggleWishlist(product.id)} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" /></button></div><div className="detail-notes"><div><span>Shipping</span><p>Ships in 2–4 business days across India.</p></div><div><span>Returns</span><p>Easy returns within 7 days of delivery.</p></div><div><span>Details</span><p>{product.material}. {product.careInstructions}</p></div></div><div className="sku-line"><span>SKU {product.sku}</span><span>Scudo Clothing</span></div></div></div><section className="product-lower"><div><span className="eyebrow">Reviews / 03</span><h2>Worn in the wild.</h2></div><div className="review-content"><div className="review-card"><div className="stars">★★★★★</div><p>“Good weight, easy fit. It’s become the jersey I reach for even when there isn’t a game on.”</p><span>— A. Mehta / Verified buyer</span></div><form className="review-form" onSubmit={(event) => { event.preventDefault(); setReviewSent(true) }}><span className="form-title">Leave a review</span><input required placeholder="Your name" aria-label="Your name" /><textarea required placeholder="What did you think?" aria-label="Your review" rows="3" /><button className="button button-ghost" type="submit">{reviewSent ? 'Review submitted' : 'Submit review'}</button></form></div></section><section className="section related-section"><SectionHeading eyebrow="Complete the rotation" title="You may also like" /><div className="product-grid product-grid--four">{products.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} onQuickAdd={(p) => onAddToCart(p, p.sizes[0], p.colors[0], 1)} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section></div></main>
+  return <main className="product-page"><div className="page-shell"><Breadcrumbs items={[{ label: product.category, path: `/shop/${product.category.toLowerCase().replace(' ', '-')}` }, { label: product.name }]} /><div className="product-detail"><div className="product-gallery"><div className="gallery-main"><img src={product.images[activeImage]} alt={`${product.name} view ${activeImage + 1}`} /><button className="zoom-hint" aria-label="Product image zoom">Click to zoom</button></div><div className="gallery-thumbs">{product.images.map((src, index) => <button key={src} className={activeImage === index ? 'is-active' : ''} onClick={() => setActiveImage(index)}><img src={src} alt={`${product.name} thumbnail ${index + 1}`} /></button>)}</div></div><div className="product-info"><span className="eyebrow">{product.collection} / {product.category}</span><h1>{product.name}</h1><div className="detail-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)} <span className="tax-note">incl. taxes</span></div><p className="detail-description">{product.description}</p><div className="selector-block"><div className="selector-label"><span>Colour</span><strong>{color}</strong></div><div className="swatches">{product.colors.map((item) => <button key={item} className={`swatch swatch--${item.toLowerCase().replace(/[^a-z0-9]/g, '')} ${color === item ? 'is-selected' : ''}`} onClick={() => setColor(item)} aria-label={`Select ${item}`}><span /></button>)}</div></div><div className="selector-block"><div className="selector-label"><span>Size</span><Link to="/size-guide">Size guide <Icon name="arrow" size={13} /></Link></div><div className="size-grid">{product.sizes.map((item) => <button key={item} className={size === item ? 'is-selected' : ''} onClick={() => setSize(item)}>{item}</button>)}</div>{!size && <span className="selection-note">Select a size to add this piece.</span>}</div><div className="add-row"><div className="quantity-control"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button onClick={() => setQuantity(Math.min(product.inventory || 1, quantity + 1))} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div><button className="button button-dark add-to-bag" onClick={add} disabled={!size || product.isSoldOut}>{product.isSoldOut ? 'Sold out' : !size ? 'Select a size' : 'Add to bag'} <Icon name="arrow" size={16} /></button><button className={`icon-button detail-wishlist ${wished ? 'is-active' : ''}`} onClick={() => onToggleWishlist(product.id)} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" /></button></div><div className="detail-notes"><div><span>Shipping</span><p>Ships in 2–4 business days across India.</p></div><div><span>Returns</span><p>Easy returns within 7 days of delivery.</p></div><div><span>Details</span><p>{product.material}. {product.careInstructions}</p></div></div><div className="sku-line"><span>SKU {product.sku}</span><span>Scudo Clothing</span></div></div></div><section className="product-lower"><div><span className="eyebrow">Reviews / 03</span><h2>Worn in the wild.</h2></div><div className="review-content"><div className="review-card"><div className="stars">★★★★★</div><p>“Good weight, easy fit. It’s become the jersey I reach for even when there isn’t a game on.”</p><span>— A. Mehta / Verified buyer</span></div><form className="review-form" onSubmit={(event) => { event.preventDefault(); setReviewSent(true) }}><span className="form-title">Leave a review</span><input required placeholder="Your name" aria-label="Your name" /><textarea required placeholder="What did you think?" aria-label="Your review" rows="3" /><button className="button button-ghost" type="submit">{reviewSent ? 'Review submitted' : 'Submit review'}</button></form></div></section><section className="section related-section"><SectionHeading eyebrow="Complete the rotation" title="You may also like" /><div className="product-grid product-grid--four">{products.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} onQuickAdd={(p) => onAddToCart(p, p.sizes[0], p.colors[0], 1)} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section></div></main>
 }
 
 function CartDrawer({ open, onClose, cart, onUpdateQuantity, onRemove, onCheckout }) {

@@ -323,7 +323,8 @@ h1, h2, h3 { font-weight: 400; }
 .swatches { display: flex; gap: 9px; }
 .swatch { width: 25px; height: 25px; display: grid; place-items: center; border: 1px solid transparent; border-radius: 50%; background: transparent; padding: 3px; }
 .swatch span { width: 100%; height: 100%; display: block; border: 1px solid rgba(17,17,17,.18); border-radius: 50%; background: var(--ink); }
-.swatch--sand span { background: var(--sand); }.swatch--mint span { background: #c2d4c5; }.swatch--offwhite span { background: var(--paper); }.swatch--charcoal span { background: var(--charcoal); }
+.swatch--sand span { background: var(--sand); }.swatch--mint span { background: #b8e2d1; }.swatch--offwhite span, .swatch--white span { background: #fafafa; }.swatch--charcoal span { background: var(--charcoal); }
+.swatch--skyblue span { background: #72c5ea; }.swatch--yellow span { background: #f5d700; }.swatch--green span { background: #137347; }.swatch--navy span { background: #101f3d; }.swatch--royalblue span, .swatch--blue span { background: #1657bd; }.swatch--crimson span, .swatch--red span { background: #c92735; }.swatch--black span { background: #0d0d0d; }.swatch--gold span { background: #b59649; }.swatch--deepgreen span { background: #123f38; }
 .swatch.is-selected { border-color: var(--ink); }
 .size-grid { display: flex; flex-wrap: wrap; gap: 7px; }
 .size-grid button { min-width: 48px; height: 40px; border: 1px solid var(--line); background: transparent; font-size: 11px; }
