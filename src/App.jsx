@@ -124,7 +124,7 @@ function BrandIntro({ onComplete }) {
     const completeTimer = window.setTimeout(onComplete, 1750)
     return () => { window.clearTimeout(leaveTimer); window.clearTimeout(completeTimer) }
   }, [])
-  return <div className={`brand-intro ${leaving ? 'brand-intro--leaving' : ''}`} aria-hidden="true"><ScudoLogo size="md" showSubtitle showShadow className="brand-intro__logo" /><span className="brand-intro__caption">FOOTBALL / EVERYDAY</span></div>
+  return <div className={`brand-intro ${leaving ? 'brand-intro--leaving' : ''}`} aria-hidden="true"><span className="brand-intro__grid" /><span className="brand-intro__ring brand-intro__ring--one" /><span className="brand-intro__ring brand-intro__ring--two" /><ScudoLogo size="md" showSubtitle showShadow className="brand-intro__logo" /><span className="brand-intro__caption">FOOTBALL / EVERYDAY</span></div>
 }
 
 function usePersistedState(key, initialValue) {
@@ -290,7 +290,7 @@ function CheckoutPage({ cart, onPlaceOrder }) {
 }
 
 function FormSection({ title, children }) { return <section className="form-section"><h2>{title}</h2>{children}</section> }
-function Field({ label, type = 'text', value, onChange, required, wide }) { return <label className={`field ${wide ? 'field--wide' : ''}`}><span>{label}{required && ' *'}</span><input type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} /></label> }
+function Field({ label, type = 'text', value, onChange, required, wide, autoComplete }) { return <label className={`field ${wide ? 'field--wide' : ''}`}><span>{label}{required && ' *'}</span><input type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} autoComplete={autoComplete} /></label> }
 
 function OrderConfirmation({ order }) { return <main className="confirmation-page"><div className="confirmation-card"><div className="confirmation-mark"><Icon name="check" size={26} /></div><span className="eyebrow">Order received / {order?.number || 'SC-DEMO'}</span><h1>See you on the other side.</h1><p>Your demo order is safely captured. No payment has been processed; connect a provider before launch.</p><div className="confirmation-meta"><div><span>Payment status</span><strong>Awaiting payment</strong></div><div><span>Estimated delivery</span><strong>2–4 business days</strong></div><div><span>Ship to</span><strong>{order?.city || 'Your city'}, {order?.country || 'India'}</strong></div></div><Link to="/shop" className="button button-dark">Continue shopping <Icon name="arrow" size={16} /></Link></div></main> }
 
@@ -303,7 +303,30 @@ function InfoPage({ type }) {
   return <main className="info-page"><div className="page-shell"><Breadcrumbs items={[{ label: type === 'about' ? 'About' : type === 'size-guide' ? 'Size guide' : type === 'shipping-returns' ? 'Shipping & returns' : 'Contact' }]} /><div className="info-hero"><span className="eyebrow">{content.eyebrow}</span><h1>{content.title}</h1><p>{content.intro}</p></div><div className="info-sections">{content.sections.map(([title, copy]) => <section key={title}><span className="eyebrow">{title}</span><p>{copy}</p></section>)}</div>{type === 'size-guide' && <div className="size-table"><div className="size-table-head"><span>Size</span><span>Chest</span><span>Length</span></div>{[['S','36–38 in','27 in'],['M','39–41 in','28 in'],['L','42–44 in','29 in'],['XL','45–47 in','30 in'],['XXL','48–50 in','31 in']].map((row) => <div className="size-table-row" key={row[0]}>{row.map((value) => <span key={value}>{value}</span>)}</div>)}</div>} {type === 'contact' && <a className="button button-dark" href="mailto:hello@scudoclothing.com">Email the team <Icon name="arrow" size={16} /></a>}</div></main>
 }
 
-function AccountPage() { const [mode, setMode] = useState('login'); const [submitted, setSubmitted] = useState(false); return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">{mode === 'login' ? 'Welcome back' : 'Join the team'}</span><h1>{mode === 'login' ? 'Log in to your account.' : 'Create your account.'}</h1><form onSubmit={(e) => { e.preventDefault(); setSubmitted(true) }}><Field label="Email address" type="email" onChange={() => {}} value="" required /><Field label="Password" type="password" onChange={() => {}} value="" required /><button className="button button-dark" type="submit">{submitted ? 'Demo access granted' : mode === 'login' ? 'Log in' : 'Create account'} <Icon name="arrow" size={16} /></button></form><button className="text-link account-toggle" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setSubmitted(false) }}>{mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Log in'}</button><p className="demo-note">Demo mode is active. Connect Supabase or Firebase to persist customer accounts.</p></div></main> }
+function AuthForm({ onSuccess, compact = false }) {
+  const [mode, setMode] = useState('login')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const submit = (event) => {
+    event.preventDefault()
+    if (mode === 'signup' && !name.trim()) return setError('Please enter your name.')
+    if (!email.includes('@') || password.length < 4) return setError('Enter a valid email and a password of at least 4 characters.')
+    onSuccess({ name: name.trim() || email.split('@')[0], email: email.trim().toLowerCase() })
+  }
+  const switchMode = () => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }
+  return <form className={`auth-form ${compact ? 'auth-form--compact' : ''}`} onSubmit={submit}>{mode === 'signup' && <Field label="Full name" value={name} onChange={setName} autoComplete="name" required />}<Field label="Email address" type="email" value={email} onChange={setEmail} autoComplete="email" required /><Field label="Password" type="password" value={password} onChange={setPassword} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />{error && <p className="form-error form-error--block">{error}</p>}<button className="button button-dark auth-submit" type="submit">{mode === 'login' ? 'Log in' : 'Create account'} <Icon name="arrow" size={16} /></button><button className="text-link account-toggle" type="button" onClick={switchMode}>{mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Log in'}</button></form>
+}
+
+function AuthGate({ onClose, onAuthenticated }) {
+  return <div className="auth-gate-overlay" onClick={onClose}><aside className="auth-gate-card" onClick={(event) => event.stopPropagation()}><button className="icon-button auth-gate-close" onClick={onClose} aria-label="Close login panel"><Icon name="close" /></button><ScudoLogo size="sm" showSubtitle={false} showShadow={false} /><span className="eyebrow">Members first</span><h2>Sign in to add<br /><em>to your bag.</em></h2><p>Create an account or log in to keep your rotation saved.</p><AuthForm onSuccess={onAuthenticated} compact /></aside></div>
+}
+
+function AccountPage({ account, onAuthenticate, onLogout }) {
+  if (account) return <main className="account-page"><div className="account-card account-card--signed-in"><ScudoLogo size="sm" /><span className="eyebrow">Your Scudo account</span><h1>Welcome back, {account.name}.</h1><p className="account-email">{account.email}</p><p className="demo-note">Your account gate is active for this demo store. Connect Supabase or Firebase to persist accounts securely.</p><button className="button button-ghost" onClick={onLogout}>Log out</button></div></main>
+  return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">Welcome back</span><h1>Log in to your account.</h1><AuthForm onSuccess={onAuthenticate} /><p className="demo-note">Demo account mode is active. Connect Supabase or Firebase before launch.</p></div></main>
+}
 
 function AdminPage() { const [authed, setAuthed] = usePersistedState('scudo-admin-auth', false); const [announcement, setAnnouncement] = usePersistedState('scudo-announcement', 'DROP 01 — THE FIRST XI'); const [saved, setSaved] = useState(false); if (!authed) return <main className="account-page"><div className="account-card"><span className="eyebrow">Store admin</span><h1>Keep the team sheet current.</h1><p>Protected demo foundation for catalog, inventory, content, and order operations.</p><button className="button button-dark" onClick={() => setAuthed(true)}>Enter demo dashboard <Icon name="arrow" size={16} /></button><p className="demo-note">Demo access only. Replace this gate with your auth provider before launch.</p></div></main>; return <main className="admin-page"><div className="page-shell"><div className="admin-header"><div><span className="eyebrow">Scudo / Store admin</span><h1>Good morning, manager.</h1></div><button className="button button-ghost" onClick={() => setAuthed(false)}>Log out</button></div><div className="admin-stats">{[['Live products', products.filter((p) => !p.isSoldOut).length, 'catalog'], ['Inventory value', formatMoney(products.reduce((sum, p) => sum + p.price * p.inventory, 0)), 'at retail'], ['Low stock', products.filter((p) => p.inventory > 0 && p.inventory < 8).length, 'needs a look'], ['Orders today', 'Demo', 'connect payments']].map(([label, value, note]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div><div className="admin-grid"><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Content</span><h2>Announcement bar</h2></div><span className="status-pill">Live</span></div><p>Edit the message shown above the storefront header.</p><div className="admin-edit-row"><input value={announcement} onChange={(e) => { setAnnouncement(e.target.value); setSaved(false) }} /><button className="button button-dark" onClick={() => setSaved(true)}>Save</button></div>{saved && <span className="form-success">Saved to demo store.</span>}</section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Catalog</span><h2>Products</h2></div><Link to="/shop" className="text-link">View storefront <Icon name="arrow" size={14} /></Link></div><div className="admin-products">{products.map((product) => <div key={product.id}><img src={product.images[0]} alt="" /><span>{product.name}<small>{product.sku}</small></span><strong className={product.inventory < 8 ? 'low-stock' : ''}>{product.isSoldOut ? 'Sold out' : `${product.inventory} in stock`}</strong><button className="icon-button" aria-label={`Edit ${product.name}`}><Icon name="chevron" size={15} /></button></div>)}</div></section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Operations</span><h2>Next connections</h2></div></div><div className="admin-checklist">{['Product image storage', 'Razorpay / Stripe payments', 'Supabase authentication', 'Orders + fulfillment webhooks'].map((item, i) => <div key={item}><span className={i === 0 ? 'check is-done' : 'check'}>{i === 0 && <Icon name="check" size={13} />}</span>{item}<span className="connection-status">{i === 0 ? 'Ready for upload' : 'Not configured'}</span></div>)}</div></section></div></div></main> }
 
@@ -315,11 +338,17 @@ export default function App() {
   })
   const [wishlist, setWishlist] = usePersistedState('scudo-wishlist', [])
   const [cart, setCart] = usePersistedState('scudo-cart', [])
+  const [account, setAccount] = usePersistedState('scudo-account', null)
   const [cartOpen, setCartOpen] = useState(false)
+  const [authPrompt, setAuthPrompt] = useState(false)
+  const [pendingAdd, setPendingAdd] = useState(null)
   const [order, setOrder] = usePersistedState('scudo-last-order', null)
   useEffect(() => { document.title = path === '/' ? 'Scudo Clothing — Football-inspired streetwear' : `${path.replace('/', '').replaceAll('/', ' / ')} — Scudo Clothing` }, [route, path])
   const toggleWishlist = (id) => setWishlist((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
-  const addToCart = (product, size, color, quantity = 1) => { const key = `${product.id}-${size}-${color}`; setCart((current) => { const existing = current.find((item) => item.key === key); return existing ? current.map((item) => item.key === key ? { ...item, quantity: item.quantity + quantity } : item) : [...current, { key, product, size, color, quantity }] }); setCartOpen(true) }
+  const addToCartNow = (product, size, color, quantity = 1) => { const key = `${product.id}-${size}-${color}`; setCart((current) => { const existing = current.find((item) => item.key === key); return existing ? current.map((item) => item.key === key ? { ...item, quantity: item.quantity + quantity } : item) : [...current, { key, product, size, color, quantity }] }); setCartOpen(true) }
+  const addToCart = (product, size, color, quantity = 1) => { if (!account) { setPendingAdd({ product, size, color, quantity }); setAuthPrompt(true); return }; addToCartNow(product, size, color, quantity) }
+  const authenticate = (profile) => { setAccount(profile); setAuthPrompt(false); if (pendingAdd) { addToCartNow(pendingAdd.product, pendingAdd.size, pendingAdd.color, pendingAdd.quantity); setPendingAdd(null) } }
+  const closeAuthPrompt = () => { setAuthPrompt(false); setPendingAdd(null) }
   const updateQuantity = (key, quantity) => setCart((current) => quantity < 1 ? current.filter((item) => item.key !== key) : current.map((item) => item.key === key ? { ...item, quantity } : item))
   const removeCartItem = (key) => setCart((current) => current.filter((item) => item.key !== key))
   const quickAdd = (product) => { if (!product.isSoldOut) addToCart(product, product.sizes[0], product.colors[0], 1) }
@@ -342,8 +371,8 @@ export default function App() {
   else if (path === '/cart') content = <CartPage cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => navigate('/checkout')} />
   else if (path === '/checkout') content = <CheckoutPage cart={cart} onPlaceOrder={placeOrder} />
   else if (path === '/order-confirmation') content = <OrderConfirmation order={order} />
-  else if (path === '/account') content = <AccountPage />
+  else if (path === '/account') content = <AccountPage account={account} onAuthenticate={authenticate} onLogout={() => setAccount(null)} />
   else if (path === '/admin') content = <AdminPage />
   else content = <InfoPage type="about" />
-  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><Header cartCount={cartCount} wishlistCount={wishlist.length} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
+  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><Header cartCount={cartCount} wishlistCount={wishlist.length} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
 }
