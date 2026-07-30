@@ -59,6 +59,22 @@ const collections = [
   { title: 'Everyday Uniform', eyebrow: '03 / Daily rotation', copy: 'Good enough for every day.', image: image('photo-1523381210434-271e8be1f52b'), path: '/collections?name=everyday', tone: 'cream' }
 ]
 
+const menuCards = [
+  { label: 'Matchday', path: '/shop/jerseys', image: image('photo-1521572163474-6864f9cf17ab') },
+  { label: 'Everyday', path: '/shop/t-shirts', image: image('photo-1523381210434-271e8be1f52b') },
+  { label: 'Drop 01', path: '/collections', image: image('photo-1515886657613-9f3515b0c78f') },
+  { label: 'The story', path: '/about', image: image('photo-1529139574466-a303027c1d8b') }
+]
+
+const menuCategories = [
+  { label: 'Bestsellers', path: '/shop?sort=featured', note: 'The starting XI' },
+  { label: 'New arrivals', path: '/shop?sort=newest', note: 'Just in' },
+  { label: 'Shop all', path: '/shop', note: 'The full rotation' },
+  { label: 'Master version', path: '/collections?name=master-version', note: 'Matchday standard' },
+  { label: 'Player version', path: '/collections?name=player-version', note: 'Lightweight energy' },
+  { label: 'Affordable kits', path: '/shop?sort=price-low', note: 'Easy on the wallet' }
+]
+
 const formatMoney = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)
 
 function Icon({ name, size = 18 }) {
@@ -100,6 +116,17 @@ export function ScudoLogo({ size = 'md', variant = 'default', showSubtitle = tru
   )
 }
 
+function BrandIntro({ onComplete }) {
+  const [leaving, setLeaving] = useState(false)
+  useEffect(() => {
+    try { sessionStorage.setItem('scudo-intro-seen', '1') } catch {}
+    const leaveTimer = window.setTimeout(() => setLeaving(true), 1050)
+    const completeTimer = window.setTimeout(onComplete, 1750)
+    return () => { window.clearTimeout(leaveTimer); window.clearTimeout(completeTimer) }
+  }, [])
+  return <div className={`brand-intro ${leaving ? 'brand-intro--leaving' : ''}`} aria-hidden="true"><ScudoLogo size="md" showSubtitle showShadow className="brand-intro__logo" /><span className="brand-intro__caption">FOOTBALL / EVERYDAY</span></div>
+}
+
 function usePersistedState(key, initialValue) {
   const [value, setValue] = useState(() => {
     try { return JSON.parse(localStorage.getItem(key)) ?? initialValue } catch { return initialValue }
@@ -131,14 +158,19 @@ function Link({ to, children, className = '', onClick, ...props }) {
 function Header({ cartCount, wishlistCount, onCartOpen }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [announcement, setAnnouncement] = usePersistedState('scudo-announcement', 'DROP 01 — THE FIRST XI')
-  const nav = [['New arrivals', '/shop?sort=newest'], ['Jerseys', '/shop/jerseys'], ['T-shirts', '/shop/t-shirts'], ['Collections', '/collections'], ['About', '/about']]
+  useEffect(() => {
+    const closeOnEscape = (event) => event.key === 'Escape' && setMenuOpen(false)
+    window.addEventListener('keydown', closeOnEscape)
+    document.body.classList.toggle('menu-open', menuOpen)
+    return () => { window.removeEventListener('keydown', closeOnEscape); document.body.classList.remove('menu-open') }
+  }, [menuOpen])
+  const closeMenu = () => setMenuOpen(false)
   return <>
     <div className="announcement"><span>{announcement}</span><button onClick={() => setAnnouncement(announcement === 'DROP 01 — THE FIRST XI' ? 'MATCHDAY / EVERYDAY' : 'DROP 01 — THE FIRST XI')} aria-label="Change announcement"><Icon name="chevron" size={13} /></button></div>
     <header className="site-header">
       <div className="header-inner">
-        <button className="icon-button mobile-menu-button" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
+        <button className="icon-button mobile-menu-button" onClick={() => setMenuOpen(true)} aria-label="Open categories menu"><Icon name="menu" /></button>
         <Link to="/" className="header-logo"><ScudoLogo size="sm" showSubtitle /></Link>
-        <nav className="desktop-nav" aria-label="Primary navigation">{nav.map(([label, path]) => <Link key={path} to={path}>{label}</Link>)}</nav>
         <div className="header-actions">
           <Link to="/shop" className="icon-button" aria-label="Search"><Icon name="search" /></Link>
           <Link to="/account" className="icon-button header-account" aria-label="Account"><Icon name="user" /></Link>
@@ -147,7 +179,7 @@ function Header({ cartCount, wishlistCount, onCartOpen }) {
         </div>
       </div>
     </header>
-    {menuOpen && <div className="mobile-menu-overlay" onClick={() => setMenuOpen(false)}><aside className="mobile-drawer" onClick={(event) => event.stopPropagation()}><div className="drawer-top"><ScudoLogo size="sm" showSubtitle={false} /><button className="icon-button" onClick={() => setMenuOpen(false)} aria-label="Close menu"><Icon name="close" /></button></div><nav>{nav.map(([label, path]) => <Link key={path} to={path} onClick={() => setMenuOpen(false)}>{label}<Icon name="arrow" size={16} /></Link>)}</nav><div className="mobile-menu-footer"><Link to="/size-guide" onClick={() => setMenuOpen(false)}>Size guide</Link><Link to="/shipping-returns" onClick={() => setMenuOpen(false)}>Shipping & returns</Link><Link to="/contact" onClick={() => setMenuOpen(false)}>Contact</Link></div></aside></div>}
+    {menuOpen && <div className="mobile-menu-overlay" onClick={closeMenu}><aside className="mobile-drawer" onClick={(event) => event.stopPropagation()}><div className="drawer-top"><button className="drawer-close" onClick={closeMenu} aria-label="Close categories menu"><Icon name="close" /></button><span className="drawer-title">Categories</span><span className="drawer-top-spacer" /></div><div className="menu-featured" aria-label="Featured collections">{menuCards.map((card) => <Link key={card.label} to={card.path} onClick={closeMenu}><img src={card.image} alt="" /><span>{card.label}</span></Link>)}</div><div className="menu-section-label">Scudo / Categories</div><nav className="category-nav" aria-label="Scudo categories">{menuCategories.map((item) => <Link key={item.label} to={item.path} onClick={closeMenu}><span><strong>{item.label}</strong><small>{item.note}</small></span><Icon name="arrow" size={18} /></Link>)}</nav><div className="drawer-secondary"><Link to="/shop/jerseys" onClick={closeMenu}>Jerseys</Link><Link to="/shop/t-shirts" onClick={closeMenu}>T-shirts</Link><Link to="/collections" onClick={closeMenu}>Collections</Link><Link to="/about" onClick={closeMenu}>About</Link></div><div className="mobile-menu-footer"><Link to="/size-guide" onClick={closeMenu}>Size guide</Link><Link to="/shipping-returns" onClick={closeMenu}>Shipping & returns</Link><Link to="/contact" onClick={closeMenu}>Contact</Link></div></aside></div>}
   </>
 }
 
@@ -278,6 +310,9 @@ function AdminPage() { const [authed, setAuthed] = usePersistedState('scudo-admi
 export default function App() {
   const route = useRoute()
   const path = window.location.pathname
+  const [showIntro, setShowIntro] = useState(() => {
+    try { return !sessionStorage.getItem('scudo-intro-seen') } catch { return true }
+  })
   const [wishlist, setWishlist] = usePersistedState('scudo-wishlist', [])
   const [cart, setCart] = usePersistedState('scudo-cart', [])
   const [cartOpen, setCartOpen] = useState(false)
@@ -310,5 +345,5 @@ export default function App() {
   else if (path === '/account') content = <AccountPage />
   else if (path === '/admin') content = <AdminPage />
   else content = <InfoPage type="about" />
-  return <div className="app"><Header cartCount={cartCount} wishlistCount={wishlist.length} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} /></div>
+  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><Header cartCount={cartCount} wishlistCount={wishlist.length} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
 }
