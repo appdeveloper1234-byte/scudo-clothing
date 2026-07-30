@@ -10,6 +10,7 @@ from PIL import Image, ImageOps
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = PROJECT_ROOT / "public" / "products"
 OUTPUT_ROOT = PROJECT_ROOT / "public" / "catalog"
+RESPONSIVE_WIDTHS = (480, 960)
 
 PRODUCT_FILES = {
     "argentina-champions-home": (
@@ -147,6 +148,11 @@ def prepare_image(source: Path, target: Path) -> None:
             image = image.convert("RGB")
         target.parent.mkdir(parents=True, exist_ok=True)
         image.save(target, "WEBP", quality=84, method=6)
+        for width in RESPONSIVE_WIDTHS:
+            variant = image.copy()
+            variant.thumbnail((width, width * 2), Image.Resampling.LANCZOS)
+            variant_target = target.with_name(f"{target.stem}-{width}{target.suffix}")
+            variant.save(variant_target, "WEBP", quality=80, method=6)
 
 
 def main() -> None:

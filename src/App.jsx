@@ -1,6 +1,19 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 
 const catalogImages = (slug, count) => Array.from({ length: count }, (_, index) => `/catalog/${slug}/${String(index + 1).padStart(2, '0')}.webp`)
+const catalogVariant = (src, width) => src.replace(/\.webp$/, `-${width}.webp`)
+
+function CatalogImage({ src, sizes = '100vw', ...props }) {
+  const isCatalogImage = typeof src === 'string' && src.startsWith('/catalog/')
+  return <img
+    src={src}
+    srcSet={isCatalogImage ? `${catalogVariant(src, 480)} 480w, ${catalogVariant(src, 960)} 960w, ${src} 1600w` : undefined}
+    sizes={isCatalogImage ? sizes : undefined}
+    decoding="async"
+    {...props}
+  />
+}
 
 const jerseyDefaults = {
   category: 'Jerseys',
@@ -104,16 +117,16 @@ export const products = [
 ]
 
 const collections = [
-  { title: 'Master Version', eyebrow: '01 / Matchday standard', copy: 'Detailed builds for the full ninety.', image: catalogImages('brazil-home', 1)[0], path: '/shop?edit=master-version', tone: 'ink' },
-  { title: 'Player Version', eyebrow: '02 / Lightweight', copy: 'Athletic cuts made for movement.', image: catalogImages('real-madrid-home', 1)[0], path: '/shop?edit=player-version', tone: 'sand' },
-  { title: 'Affordable Kits', eyebrow: '03 / Easy rotation', copy: 'Strong shirts at an easier price.', image: catalogImages('brazil-blue-away', 1)[0], path: '/shop?edit=affordable-kits', tone: 'cream' }
+  { title: 'Master Version', eyebrow: '01 / Matchday standard', copy: 'Detailed builds for the full ninety.', image: catalogImages('brazil-home', 4)[3], path: '/shop?edit=master-version', tone: 'ink' },
+  { title: 'Player Version', eyebrow: '02 / Lightweight', copy: 'Athletic cuts made for movement.', image: catalogImages('real-madrid-home', 3)[2], path: '/shop?edit=player-version', tone: 'sand' },
+  { title: 'Affordable Kits', eyebrow: '03 / Easy rotation', copy: 'Strong shirts at an easier price.', image: catalogImages('brazil-blue-away', 5)[4], path: '/shop?edit=affordable-kits', tone: 'cream' }
 ]
 
 const menuCards = [
-  { label: 'New arrivals', path: '/shop?edit=new-arrivals', image: catalogImages('argentina-champions-home', 1)[0] },
-  { label: 'Player version', path: '/shop?edit=player-version', image: catalogImages('portugal-away', 1)[0] },
-  { label: 'Master version', path: '/shop?edit=master-version', image: catalogImages('france-home', 1)[0] },
-  { label: 'Affordable kits', path: '/shop?edit=affordable-kits', image: catalogImages('portugal-home-kit', 1)[0] }
+  { label: 'New arrivals', path: '/shop?edit=new-arrivals', image: catalogImages('argentina-champions-home', 3)[2] },
+  { label: 'Player version', path: '/shop?edit=player-version', image: catalogImages('portugal-away', 3)[2] },
+  { label: 'Master version', path: '/shop?edit=master-version', image: catalogImages('france-home', 3)[2] },
+  { label: 'Affordable kits', path: '/shop?edit=affordable-kits', image: catalogImages('portugal-home-kit', 3)[2] }
 ]
 
 const menuCategories = [
@@ -166,7 +179,7 @@ export function ScudoLogo({ size = 'md', variant = 'default', showSubtitle = tru
   const style = { '--logo-primary': primaryColor || (light ? '#F7F4EE' : '#111111'), '--logo-accent': accentColor || (monochrome ? (light ? '#F7F4EE' : '#111111') : '#B9A889') }
   return (
     <div className={`scudo-logo scudo-logo--${size} scudo-logo--${variant} ${horizontal ? 'scudo-logo--horizontal' : ''} ${markOnly ? 'scudo-logo--mark-only' : ''} ${sOnly ? 'scudo-logo--s-only' : ''} ${showShadow ? 'has-logo-shadow' : ''} ${className}`} style={style} aria-label="Scudo Clothing" role="img">
-      {!sOnly && <svg className="scudo-logo__shirt" viewBox="0 0 180 150" aria-hidden="true" focusable="false"><title>Scudo Clothing shirt mark</title><defs><mask id={maskId}><rect width="180" height="150" fill="white" /><path d="M65 10Q90 42 115 10Q111 43 90 47Q69 43 65 10Z" fill="black" /></mask></defs><path d="M64 10 23 22 10 68 42 79 54 52 47 140H133L126 52 138 79 170 68 157 22 116 10C111 25 103 32 90 32S69 25 64 10Z" fill="var(--logo-accent)" mask={`url(#${maskId})`} /></svg>}
+      {!sOnly && <svg className="scudo-logo__shirt" viewBox="0 0 180 150" aria-hidden="true" focusable="false"><title>Scudo Clothing shirt mark</title><defs><mask id={maskId}><rect width="180" height="150" fill="white" /><path d="M65 10Q90 42 115 10Q111 43 90 47Q69 43 65 10Z" fill="black" /></mask></defs><path className="scudo-logo__shirt-fill" d="M64 10 23 22 10 68 42 79 54 52 47 140H133L126 52 138 79 170 68 157 22 116 10C111 25 103 32 90 32S69 25 64 10Z" fill="var(--logo-accent)" mask={`url(#${maskId})`} /><path className="scudo-logo__shirt-outline" d="M64 10 23 22 10 68 42 79 54 52 47 140H133L126 52 138 79 170 68 157 22 116 10C111 25 103 32 90 32S69 25 64 10Z" fill="none" stroke="var(--logo-accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" mask={`url(#${maskId})`} /></svg>}
       {sOnly && <span className="scudo-logo__s">S</span>}
       {!markOnly && !sOnly && <div className="scudo-logo__word">{'scudo'.split('').map((letter, index) => <span key={`${letter}-${index}`} className="scudo-logo__letter" style={{ '--letter-index': index }}>{letter}</span>)}</div>}
       {showSubtitle && !markOnly && !sOnly && <div className="scudo-logo__subtitle">CLOTHINGS</div>}
@@ -175,16 +188,73 @@ export function ScudoLogo({ size = 'md', variant = 'default', showSubtitle = tru
 }
 
 function BrandIntro({ onComplete }) {
+  const [phase, setPhase] = useState('preparing')
   const [leaving, setLeaving] = useState(false)
+  const timers = useRef([])
+  const finished = useRef(false)
+
+  const complete = () => {
+    if (finished.current) return
+    finished.current = true
+    document.body.classList.remove('intro-active')
+    onComplete()
+  }
+
+  const skip = () => {
+    timers.current.forEach(window.clearTimeout)
+    setPhase('skipped')
+    setLeaving(true)
+    timers.current = [window.setTimeout(complete, 360)]
+  }
+
   useEffect(() => {
     try { sessionStorage.setItem('scudo-intro-seen', '1') } catch {}
     document.body.classList.add('intro-active')
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    const leaveTimer = window.setTimeout(() => setLeaving(true), reducedMotion ? 40 : 1660)
-    const completeTimer = window.setTimeout(onComplete, reducedMotion ? 120 : 2480)
-    return () => { window.clearTimeout(leaveTimer); window.clearTimeout(completeTimer); document.body.classList.remove('intro-active') }
+    let cancelled = false
+    const start = async () => {
+      try { await document.fonts?.ready } catch {}
+      if (cancelled) return
+      window.requestAnimationFrame(() => setPhase('active'))
+      if (reducedMotion) {
+        timers.current = [
+          window.setTimeout(() => setLeaving(true), 80),
+          window.setTimeout(complete, 220)
+        ]
+        return
+      }
+      timers.current = [
+        window.setTimeout(() => setPhase('completing'), 2320),
+        window.setTimeout(() => setLeaving(true), 2860),
+        window.setTimeout(complete, 3580)
+      ]
+    }
+    start()
+    return () => {
+      cancelled = true
+      timers.current.forEach(window.clearTimeout)
+      document.body.classList.remove('intro-active')
+    }
   }, [])
-  return <div className={`brand-intro ${leaving ? 'brand-intro--leaving' : ''}`} aria-hidden="true"><span className="brand-intro__wash" /><span className="brand-intro__sequence">SCUDO / 01</span><ScudoLogo size="md" showSubtitle showShadow className="brand-intro__logo" /><span className="brand-intro__caption">FOOTBALL / EVERYDAY</span></div>
+  return <div className={`brand-intro brand-intro--${phase} ${leaving ? 'brand-intro--leaving' : ''}`} role="dialog" aria-modal="true" aria-label="Scudo Clothing brand introduction">
+    <span className="brand-intro__wash" aria-hidden="true" />
+    <span className="brand-intro__grid" aria-hidden="true" />
+    <svg className="brand-intro__orbits" viewBox="0 0 640 420" aria-hidden="true">
+      <ellipse className="brand-intro__orbit brand-intro__orbit--outer" cx="320" cy="210" rx="282" ry="174" />
+      <ellipse className="brand-intro__orbit brand-intro__orbit--inner" cx="320" cy="210" rx="244" ry="142" />
+      <circle className="brand-intro__node brand-intro__node--one" cx="562" cy="150" r="4" />
+      <circle className="brand-intro__node brand-intro__node--two" cx="96" cy="265" r="3" />
+    </svg>
+    <span className="brand-intro__corner brand-intro__corner--tl" aria-hidden="true" />
+    <span className="brand-intro__corner brand-intro__corner--tr" aria-hidden="true" />
+    <span className="brand-intro__corner brand-intro__corner--bl" aria-hidden="true" />
+    <span className="brand-intro__corner brand-intro__corner--br" aria-hidden="true" />
+    <span className="brand-intro__sequence">SCUDO / MOTION STUDY 01</span>
+    <div className="brand-intro__lockup"><span className="brand-intro__core" aria-hidden="true" /><ScudoLogo size="md" showSubtitle showShadow className="brand-intro__logo" /><span className="brand-intro__sweep" aria-hidden="true" /></div>
+    <span className="brand-intro__caption">THE 90 MINUTES / AND EVERYTHING AFTER</span>
+    <div className="brand-intro__progress" aria-hidden="true"><span /></div>
+    <button className="brand-intro__skip" type="button" onClick={skip}>Skip intro <Icon name="arrow" size={14} /></button>
+  </div>
 }
 
 function usePersistedState(key, initialValue) {
@@ -193,6 +263,51 @@ function usePersistedState(key, initialValue) {
   })
   useEffect(() => { localStorage.setItem(key, JSON.stringify(value)) }, [key, value])
   return [value, setValue]
+}
+
+function useOverlayFocus(active, onClose) {
+  const panelRef = useRef(null)
+  const closeRef = useRef(onClose)
+  const previousFocus = useRef(null)
+  closeRef.current = onClose
+
+  useEffect(() => {
+    if (!active) return undefined
+    previousFocus.current = document.activeElement
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const panel = panelRef.current
+    const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    const focusables = () => [...(panel?.querySelectorAll(focusableSelector) || [])]
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeRef.current?.()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const items = focusables()
+      if (!items.length) return
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+    window.requestAnimationFrame(() => focusables()[0]?.focus())
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+      previousFocus.current?.focus?.()
+    }
+  }, [active])
+
+  return panelRef
 }
 
 function useRoute() {
@@ -209,7 +324,7 @@ function useMotionSystem(route) {
   useEffect(() => {
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     const root = document.documentElement
-    const motionSelector = '.hero-copy, .hero-visual, .section-heading, .product-card, .editorial-band > *, .collection-card, .story-image, .story-copy, .benefit, .newsletter > *, .shop-heading, .shop-toolbar, .shop-filters, .shop-results, .product-gallery, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
+    const motionSelector = '.hero-copy, .hero-visual, .campaign-ticker, .section-heading, .campaign-product-lead, .campaign-product-side, .product-card, .image-index-card, .editorial-band > *, .collection-card, .story-image, .story-copy, .benefit, .newsletter > *, .shop-heading, .shop-toolbar, .shop-filters, .shop-results, .product-gallery, .gallery-tile, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
     const updateScrollState = () => {
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight
       const progress = maxScroll > 0 ? Math.min(1, window.scrollY / maxScroll) : 0
@@ -257,57 +372,39 @@ function useMotionSystem(route) {
       heroVisual?.style.setProperty('--parallax-x', '0px')
       heroVisual?.style.setProperty('--parallax-y', '0px')
     }
-    const closeLightbox = () => document.querySelector('.image-lightbox')?.remove()
-    const onZoomClick = (event) => {
-      const trigger = event.target.closest?.('.zoom-hint')
-      const source = trigger?.parentElement?.querySelector('img')
-      if (!source) return
-      event.preventDefault()
-      closeLightbox()
-      const lightbox = document.createElement('div')
-      lightbox.className = 'image-lightbox'
-      lightbox.setAttribute('role', 'dialog')
-      lightbox.setAttribute('aria-modal', 'true')
-      lightbox.setAttribute('aria-label', 'Product image preview')
-      const closeButton = document.createElement('button')
-      closeButton.className = 'icon-button image-lightbox__close'
-      closeButton.type = 'button'
-      closeButton.setAttribute('aria-label', 'Close image preview')
-      closeButton.textContent = '×'
-      const imageClone = source.cloneNode(true)
-      imageClone.alt = `${source.alt} enlarged view`
-      closeButton.addEventListener('click', closeLightbox)
-      lightbox.addEventListener('click', (lightboxEvent) => { if (lightboxEvent.target === lightbox) closeLightbox() })
-      lightbox.append(closeButton, imageClone)
-      document.body.append(lightbox)
-      closeButton.focus()
-    }
-    const onLightboxKeyDown = (event) => { if (event.key === 'Escape') closeLightbox() }
     heroVisual?.addEventListener('pointermove', onHeroPointer)
     heroVisual?.addEventListener('pointerleave', resetHeroPointer)
-    document.addEventListener('click', onZoomClick)
-    document.addEventListener('keydown', onLightboxKeyDown)
 
     return () => {
       window.removeEventListener('scroll', updateScrollState)
       observer?.disconnect()
       heroVisual?.removeEventListener('pointermove', onHeroPointer)
       heroVisual?.removeEventListener('pointerleave', resetHeroPointer)
-      document.removeEventListener('click', onZoomClick)
-      document.removeEventListener('keydown', onLightboxKeyDown)
-      closeLightbox()
     }
   }, [route])
 }
 
 function navigate(path) {
+  if (path === window.location.pathname + window.location.search) {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   document.body.classList.add('is-routing')
-  window.setTimeout(() => {
+  const commit = () => {
     window.history.pushState({}, '', path)
     window.dispatchEvent(new PopStateEvent('popstate'))
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-    window.setTimeout(() => document.body.classList.remove('is-routing'), 320)
-  }, 120)
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+  window.setTimeout(() => {
+    if (!reducedMotion && document.startViewTransition) {
+      const transition = document.startViewTransition(commit)
+      transition.finished.finally(() => document.body.classList.remove('is-routing'))
+      return
+    }
+    commit()
+    window.setTimeout(() => document.body.classList.remove('is-routing'), reducedMotion ? 30 : 380)
+  }, reducedMotion ? 0 : 140)
 }
 
 function Link({ to, children, className = '', onClick, ...props }) {
@@ -317,6 +414,7 @@ function Link({ to, children, className = '', onClick, ...props }) {
 function Header({ cartCount, wishlistCount, onCartOpen, account }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
+  const menuRef = useOverlayFocus(menuOpen, () => setMenuOpen(false))
   useEffect(() => {
     const closeOnEscape = (event) => { if (event.key === 'Escape') { setMenuOpen(false); setAccountMenuOpen(false) } }
     const closeAccountOnOutside = (event) => { if (!event.target.closest?.('.account-menu-shell')) setAccountMenuOpen(false) }
@@ -340,7 +438,7 @@ function Header({ cartCount, wishlistCount, onCartOpen, account }) {
         </div>
       </div>
     </header>
-    {menuOpen && <div className="mobile-menu-overlay" onClick={closeMenu}><aside className="mobile-drawer" onClick={(event) => event.stopPropagation()}><div className="drawer-top"><button className="drawer-close" onClick={closeMenu} aria-label="Close categories menu"><Icon name="close" /></button><span className="drawer-title">Categories</span><span className="drawer-top-spacer" /></div><div className="menu-featured" aria-label="Featured collections">{menuCards.map((card) => <Link key={card.label} to={card.path} onClick={closeMenu}><img src={card.image} alt="" /><span>{card.label}</span></Link>)}</div><div className="menu-section-label">Scudo / Categories</div><nav className="category-nav" aria-label="Scudo categories">{menuCategories.map((item) => <Link key={item.label} to={item.path} onClick={closeMenu}><span><strong>{item.label}</strong><small>{item.note}</small></span><Icon name="arrow" size={18} /></Link>)}</nav><div className="drawer-secondary"><Link to="/shop/jerseys" onClick={closeMenu}>Jerseys</Link><Link to="/shop/t-shirts" onClick={closeMenu}>T-shirts</Link><Link to="/collections" onClick={closeMenu}>Collections</Link><Link to="/about" onClick={closeMenu}>About</Link></div><div className="mobile-menu-footer"><Link to="/size-guide" onClick={closeMenu}>Size guide</Link><Link to="/shipping-returns" onClick={closeMenu}>Shipping & returns</Link><Link to="/contact" onClick={closeMenu}>Contact</Link></div></aside></div>}
+    {menuOpen && <div className="mobile-menu-overlay" onClick={closeMenu}><aside className="mobile-drawer" ref={menuRef} onClick={(event) => event.stopPropagation()} aria-label="Categories menu"><div className="drawer-top"><button className="drawer-close" onClick={closeMenu} aria-label="Close categories menu"><Icon name="close" /></button><span className="drawer-title">Categories</span><span className="drawer-top-spacer" /></div><div className="menu-featured" aria-label="Featured collections">{menuCards.map((card) => <Link key={card.label} to={card.path} onClick={closeMenu}><CatalogImage src={card.image} alt="" sizes="112px" loading="lazy" /><span>{card.label}</span></Link>)}</div><div className="menu-section-label">Scudo / Categories</div><nav className="category-nav" aria-label="Scudo categories">{menuCategories.map((item) => <Link key={item.label} to={item.path} onClick={closeMenu}><span><strong>{item.label}</strong><small>{item.note}</small></span><Icon name="arrow" size={18} /></Link>)}</nav><div className="drawer-secondary"><Link to="/shop/jerseys" onClick={closeMenu}>Jerseys</Link><Link to="/shop/t-shirts" onClick={closeMenu}>T-shirts</Link><Link to="/collections" onClick={closeMenu}>Collections</Link><Link to="/about" onClick={closeMenu}>About</Link></div><div className="drawer-account-links"><Link to={account ? '/orders' : '/account'} onClick={closeMenu}>{account ? 'Your orders' : 'Log in / Sign up'} <Icon name="arrow" size={15} /></Link><Link to="/wishlist" onClick={closeMenu}>Wishlist {wishlistCount > 0 && `(${wishlistCount})`} <Icon name="heart" size={15} /></Link>{account && <Link to="/settings" onClick={closeMenu}>Settings <Icon name="arrow" size={15} /></Link>}</div><div className="mobile-menu-footer"><Link to="/size-guide" onClick={closeMenu}>Size guide</Link><Link to="/shipping-returns" onClick={closeMenu}>Shipping & returns</Link><Link to="/contact" onClick={closeMenu}>Contact</Link></div></aside></div>}
   </>
 }
 
@@ -365,7 +463,7 @@ function ProductCard({ product, onQuickAdd, wishlist, onToggleWishlist }) {
     window.setTimeout(() => setFeedback('idle'), 1300)
   }
   const feedbackClass = feedback === 'idle' ? '' : `is-${feedback}`
-  return <article className="product-card"><div className="product-image-wrap"><Link to={`/product/${product.slug}`} className="product-image-link"><img className="product-image-main" src={product.images[0]} alt={`${product.name} product image`} loading="lazy" /><img className="product-image-secondary" src={product.images[1] || product.images[0]} alt="" aria-hidden="true" loading="lazy" /><span className="product-status">{product.isSoldOut ? 'Sold out' : product.isNew ? 'New' : product.salePrice ? 'Sale' : 'Available'}</span></Link><WishlistButton active={isWished} onClick={() => onToggleWishlist(product.id)} /><button className={`quick-add ${feedbackClass}`} onClick={quickAdd} disabled={product.isSoldOut}>{product.isSoldOut ? 'Sold out' : feedback === 'added' ? 'Added to bag' : feedback === 'signin' ? 'Sign in required' : 'Quick add'}<Icon name={feedback === 'added' ? 'check' : 'plus'} size={15} /></button></div><div className="product-meta"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link><div className="product-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><div className="product-detail-line"><span>{product.colors.join(' / ')}</span><span>{product.sizes.length} sizes</span></div></div></article>
+  return <article className="product-card"><div className="product-image-wrap"><Link to={`/product/${product.slug}`} className="product-image-link"><CatalogImage className="product-image-main" src={product.images[0]} alt={`${product.name} product image`} sizes="(max-width: 740px) 50vw, (max-width: 1000px) 33vw, 25vw" loading="lazy" /><span className="product-status">{product.isSoldOut ? 'Sold out' : product.isNew ? 'New' : product.salePrice ? 'Sale' : 'Available'}</span></Link><WishlistButton active={isWished} onClick={() => onToggleWishlist(product.id)} /><button className={`quick-add ${feedbackClass}`} onClick={quickAdd} disabled={product.isSoldOut}>{product.isSoldOut ? 'Sold out' : feedback === 'added' ? 'Added to bag' : feedback === 'signin' ? 'Sign in required' : 'Quick add'}<Icon name={feedback === 'added' ? 'check' : 'plus'} size={15} /></button></div><div className="product-meta"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link><div className="product-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><div className="product-detail-line"><span>{product.colors.join(' / ')}</span><span>{product.sizes.length} sizes</span></div></div></article>
 }
 
 function WishlistButtonLegacy({ active, onClick }) { return <button className={`wishlist-button ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={active ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" size={17} /></button> }
@@ -383,14 +481,30 @@ function SectionHeading({ eyebrow, title, copy, action }) { return <div classNam
 function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
   const featured = products.filter((p) => p.isFeatured)
   const arrivals = products.filter((p) => p.isNew)
-  const heroProduct = products.find((product) => product.id === 'portugal-black-special') || products[0]
-  return <main>
-    <section className="hero"><div className="hero-copy"><span className="eyebrow">Scudo Clothing / The international edit</span><h1>Built for the<br /><em>90 minutes</em><br />and everything after.</h1><p>Football-inspired pieces made for match days, city nights, and everyday movement.</p><div className="button-row"><Link to="/shop?edit=new-arrivals" className="button button-dark">Shop new arrivals <Icon name="arrow" size={16} /></Link><Link to="/shop/jerseys" className="button button-ghost">Explore jerseys</Link></div><div className="hero-note"><span className="hero-note-dot" /> Eleven shirts are now in the rotation</div></div><div className="hero-visual"><img src={heroProduct.images[0]} alt={`${heroProduct.name} editorial product image`} /><div className="hero-stamp"><span>SC</span><span>01 / 11</span></div><div className="hero-caption"><span>{heroProduct.name}</span><span>International edit / 2026</span></div></div></section>
-    <section className="section section-featured"><SectionHeading eyebrow="The starting XI" title="Pieces in play" copy="The ones we reach for first." action={<Link to="/shop" className="text-link">View all <Icon name="arrow" size={15} /></Link>} /><div className="product-grid product-grid--four">{featured.slice(0, 4).map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section>
-    <section className="editorial-band"><div><span className="eyebrow">A note from the touchline</span><h2>Everyday uniform,<br /><em>matchday energy.</em></h2></div><p>Scudo is a study in the pieces around the game — the warm-up, the walk home, the long conversations after full time.</p><Link to="/about" className="circle-link" aria-label="Read the Scudo story"><Icon name="arrow" size={22} /></Link></section>
+  const campaignProducts = ['portugal-black-special', 'argentina-champions-home', 'france-away'].map((id) => products.find((product) => product.id === id)).filter(Boolean)
+  const [heroIndex, setHeroIndex] = useState(0)
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+    const interval = window.setInterval(() => { if (!document.hidden) setHeroIndex((index) => (index + 1) % campaignProducts.length) }, 5600)
+    return () => window.clearInterval(interval)
+  }, [campaignProducts.length])
+  const heroProduct = campaignProducts[heroIndex] || products[0]
+  const spotlightProducts = [...featured, ...products].filter((product, index, list) => list.findIndex((item) => item.id === product.id) === index).slice(0, 3)
+  const imageIndexProducts = products.map((product, index) => ({
+    product,
+    image: product.images[(index % (product.images.length - 1)) + 1]
+  }))
+  const catalogViewCount = products.reduce((total, product) => total + product.images.length, 0)
+  const tickerItems = ['Master version', 'Player version', 'Affordable kits', 'International shirts', 'Made for after full time']
+  return <main className="home-page">
+    <section className="hero hero--campaign"><div className="hero-copy"><div className="hero-kicker"><span>SC / 26</span><i /><span>International edit</span></div><h1><span className="hero-line">Built for the</span><em className="hero-line">90 minutes.</em><span className="hero-line">Styled for</span><span className="hero-line">everything after.</span></h1><p>Eleven international shirts, curated through a Scudo lens for match days, city nights, and every moment between.</p><div className="button-row"><Link to="/shop?edit=new-arrivals" className="button button-dark">Enter the new edit <Icon name="arrow" size={16} /></Link><Link to="/shop/jerseys" className="button button-ghost">Explore all shirts</Link></div><div className="hero-proof" aria-label="Store highlights"><div><strong>11</strong><span>shirts in rotation</span></div><div><strong>03</strong><span>curated edits</span></div><div><strong>07</strong><span>day returns</span></div></div></div><div className="hero-visual"><div className="hero-ghost-word" aria-hidden="true">SCUDO</div><CatalogImage key={heroProduct.id} src={heroProduct.images[0]} alt={`${heroProduct.name} editorial product image`} sizes="(max-width: 740px) 100vw, 58vw" loading="eager" fetchPriority="high" /><div className="hero-stamp"><span>SC</span><span>{String(heroIndex + 1).padStart(2, '0')} / 03</span></div><div className="hero-product-card"><span>{heroProduct.collection}</span><Link to={`/product/${heroProduct.slug}`}>{heroProduct.name}</Link><div><strong>{formatMoney(heroProduct.salePrice || heroProduct.price)}</strong><Link to={`/product/${heroProduct.slug}`} aria-label={`View ${heroProduct.name}`}><Icon name="arrow" size={17} /></Link></div></div><div className="hero-selector" aria-label="Campaign products">{campaignProducts.map((product, index) => <button key={product.id} className={heroIndex === index ? 'is-active' : ''} onClick={() => setHeroIndex(index)} aria-label={`Show ${product.name}`} aria-pressed={heroIndex === index}><span>{String(index + 1).padStart(2, '0')}</span><i /></button>)}</div><div className="hero-caption"><span>{heroProduct.name}</span><span>Scudo international edit / 2026</span></div></div></section>
+    <section className="campaign-ticker" aria-label="Scudo clothing edits"><div className="campaign-ticker__track">{[0, 1].map((copy) => <div key={copy} aria-hidden={copy === 1}>{tickerItems.map((item) => <span key={`${copy}-${item}`}>{item}<i>✦</i></span>)}</div>)}</div></section>
+    <section className="section section-featured section-featured--campaign"><SectionHeading eyebrow="Captain's selection / 01" title="Three shirts. Three moods." copy="The pieces setting the tone for the new rotation." action={<Link to="/shop" className="text-link">Shop the full XI <Icon name="arrow" size={15} /></Link>} /><div className="campaign-product-grid"><div className="campaign-product-lead">{spotlightProducts[0] && <ProductCard product={spotlightProducts[0]} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />}</div><div className="campaign-product-side">{spotlightProducts.slice(1).map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></div></section>
+    <section className="editorial-band"><span className="editorial-band__mark" aria-hidden="true">90+</span><div><span className="eyebrow">A note from the touchline</span><h2>Everyday uniform,<br /><em>matchday energy.</em></h2></div><p>Scudo is a study in the pieces around the game — the warm-up, the walk home, the long conversations after full time.</p><Link to="/about" className="circle-link" aria-label="Read the Scudo story"><Icon name="arrow" size={22} /></Link></section>
     <section className="section new-arrivals"><SectionHeading eyebrow="Just in" title="New arrivals" copy="First out of the tunnel." action={<Link to="/shop?edit=new-arrivals" className="text-link">Shop all <Icon name="arrow" size={15} /></Link>} /><div className="product-row">{arrivals.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section>
-    <section className="section collection-section"><SectionHeading eyebrow="Choose your rotation" title="Collections" copy="Three ways to wear the game." /><div className="collection-grid">{collections.map((collection) => <Link to={collection.path} className={`collection-card collection-card--${collection.tone}`} key={collection.title}><img src={collection.image} alt={`${collection.title} collection`} loading="lazy" /><div className="collection-overlay"><span className="eyebrow">{collection.eyebrow}</span><h3>{collection.title}</h3><span className="collection-copy">{collection.copy}</span><span className="circle-link circle-link--small"><Icon name="arrow" size={17} /></span></div></Link>)}</div></section>
-    <section className="story-section"><div className="story-image"><img src={products.find((product) => product.id === 'france-away')?.images[0]} alt="France away jersey editorial detail" loading="lazy" /></div><div className="story-copy"><span className="eyebrow">The Scudo idea</span><h2>Not a kit.<br /><em>A point of view.</em></h2><p>Scudo Clothing brings the codes of football into the everyday — considered fabrics, easy silhouettes, and the confidence to wear your colours your way.</p><Link to="/about" className="text-link">Read our story <Icon name="arrow" size={15} /></Link><div className="story-aside"><span>01</span><span>Football culture,<br />translated for daily life.</span></div></div></section>
+    <section className="section image-index-section"><div className="image-index-heading"><div><span className="eyebrow">The image archive / 2026</span><h2>Every shirt.<br /><em>Every angle.</em></h2></div><p><strong>{catalogViewCount}</strong> original photographs across the complete Scudo rotation. Select any frame to open its full product story.</p></div><div className="image-index-grid">{imageIndexProducts.map(({ product, image }, index) => <Link to={`/product/${product.slug}`} className="image-index-card" key={product.id}><CatalogImage src={image} alt={`${product.name} editorial view`} sizes="(max-width: 740px) 90vw, (max-width: 1100px) 50vw, 34vw" loading="lazy" /><span className="image-index-card__shade" /><span className="image-index-card__number">{String(index + 1).padStart(2, '0')}</span><span className="image-index-card__caption"><strong>{product.name}</strong><small>{product.collection}</small></span><span className="image-index-card__arrow"><Icon name="arrow" size={17} /></span></Link>)}</div><div className="image-index-footer"><span>11 shirts / {catalogViewCount} views</span><Link to="/shop" className="text-link">Explore the full rotation <Icon name="arrow" size={15} /></Link></div></section>
+    <section className="section collection-section"><SectionHeading eyebrow="Choose your rotation" title="Collections" copy="Three ways to wear the game." /><div className="collection-grid">{collections.map((collection) => <Link to={collection.path} className={`collection-card collection-card--${collection.tone}`} key={collection.title}><CatalogImage src={collection.image} alt={`${collection.title} collection`} sizes="(max-width: 740px) 80vw, 33vw" loading="lazy" /><div className="collection-overlay"><span className="eyebrow">{collection.eyebrow}</span><h3>{collection.title}</h3><span className="collection-copy">{collection.copy}</span><span className="circle-link circle-link--small"><Icon name="arrow" size={17} /></span></div></Link>)}</div></section>
+    <section className="story-section"><div className="story-image"><CatalogImage src={products.find((product) => product.id === 'france-away')?.images[3]} alt="France away jersey editorial detail" sizes="(max-width: 740px) 100vw, 55vw" loading="lazy" /></div><div className="story-copy"><span className="eyebrow">The Scudo idea</span><h2>Not a kit.<br /><em>A point of view.</em></h2><p>Scudo Clothing brings the codes of football into the everyday — considered fabrics, easy silhouettes, and the confidence to wear your colours your way.</p><Link to="/about" className="text-link">Read our story <Icon name="arrow" size={15} /></Link><div className="story-aside"><span>01</span><span>Football culture,<br />translated for daily life.</span></div></div></section>
     <section className="benefits-section"><div className="benefit-intro"><span className="eyebrow">The fine print</span><h2>Good pieces<br /><em>make good days.</em></h2></div><div className="benefit-grid">{[['01', 'Quality-first pieces', 'Thoughtful materials, made to be worn often.'], ['02', 'Comfortable everyday fit', 'Relaxed proportions for movement beyond the pitch.'], ['03', 'Limited-release collections', 'Small runs, considered drops, no unnecessary noise.'], ['04', 'Easy returns', 'Changed your mind? We keep the process straightforward.']].map(([number, title, copy]) => <div className="benefit" key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></div>)}</div></section>
     <Newsletter />
   </main>
@@ -418,6 +532,7 @@ function ShopPage({ wishlist, onToggleWishlist, onQuickAdd, initialCategory }) {
   const [color, setColor] = useState('All colours')
   const [sort, setSort] = useState(params.get('sort') || 'featured')
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const filtersRef = useOverlayFocus(filtersOpen, () => setFiltersOpen(false))
   const categories = ['All', ...new Set(products.map((product) => product.category))]
   const sizes = ['All sizes', 'S', 'M', 'L', 'XL', 'XXL']
   const colors = ['All colours', ...new Set(products.flatMap((product) => product.colors))]
@@ -430,15 +545,61 @@ function ShopPage({ wishlist, onToggleWishlist, onQuickAdd, initialCategory }) {
     return matchesEdit && matchesSearch && matchesCategory && matchesSize && matchesColor
   }).sort((a, b) => sort === 'newest' ? Number(b.isNew) - Number(a.isNew) : sort === 'price-low' ? (a.salePrice || a.price) - (b.salePrice || b.price) : sort === 'price-high' ? (b.salePrice || b.price) - (a.salePrice || a.price) : Number(b.isFeatured) - Number(a.isFeatured)), [search, category, size, color, sort, edit])
   const clear = () => { setSearch(''); setCategory(initialCategory || 'All'); setSize('All sizes'); setColor('All colours'); setSort('featured') }
-  return <main className="shop-page"><div className="page-shell"><Breadcrumbs items={[{ label: pageTitle }]} /><div className="shop-heading"><div><span className="eyebrow">{edit ? 'Curated team sheet' : 'The full rotation'}</span><h1>{pageTitle}</h1></div><p>Official Scudo product photography, organised for quick discovery.</p></div><div className="shop-toolbar"><button className="filter-trigger" onClick={() => setFiltersOpen(true)}><Icon name="filter" size={16} /> Filters</button><span className="product-count">{filtered.length} pieces</span><div className="sort-select"><label htmlFor="sort">Sort by</label><select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="newest">Newest</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option></select><Icon name="chevron" size={14} /></div></div><div className="shop-layout"><aside className={`shop-filters ${filtersOpen ? 'is-open' : ''}`}><div className="filters-head"><span>Filter the rotation</span><button className="icon-button" onClick={() => setFiltersOpen(false)} aria-label="Close filters"><Icon name="close" /></button></div><label className="filter-search"><span>Search</span><div><Icon name="search" size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search pieces" /></div></label><FilterGroup label="Category" options={categories} value={category} onChange={setCategory} /><FilterGroup label="Size" options={sizes} value={size} onChange={setSize} /><FilterGroup label="Colour" options={colors} value={color} onChange={setColor} /><button className="text-link clear-filter" onClick={clear}>Clear filters</button><button className="button button-dark filter-done" onClick={() => setFiltersOpen(false)}>View {filtered.length} pieces</button></aside>{filtersOpen && <div className="filter-backdrop" onClick={() => setFiltersOpen(false)} />}<div className="shop-results">{filtered.length ? <div className="product-grid product-grid--three">{filtered.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Nothing in this formation" copy="Try a different filter or clear the rotation to see every piece." action={<button className="button button-dark" onClick={clear}>Clear filters</button>} />}</div></div></div></main>
+  return <main className="shop-page"><div className="page-shell"><Breadcrumbs items={[{ label: pageTitle }]} /><div className="shop-heading"><div><span className="eyebrow">{edit ? 'Curated team sheet' : 'The full rotation'}</span><h1>{pageTitle}</h1></div><p>Official Scudo product photography, organised for quick discovery.</p></div><div className="shop-toolbar"><button className="filter-trigger" onClick={() => setFiltersOpen(true)}><Icon name="filter" size={16} /> Filters</button><span className="product-count">{filtered.length} pieces</span><div className="sort-select"><label htmlFor="sort">Sort by</label><select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="newest">Newest</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option></select><Icon name="chevron" size={14} /></div></div><div className="shop-layout"><aside ref={filtersRef} className={`shop-filters ${filtersOpen ? 'is-open' : ''}`} aria-label="Product filters"><div className="filters-head"><span>Filter the rotation</span><button className="icon-button" onClick={() => setFiltersOpen(false)} aria-label="Close filters"><Icon name="close" /></button></div><label className="filter-search"><span>Search</span><div><Icon name="search" size={16} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search pieces" /></div></label><FilterGroup label="Category" options={categories} value={category} onChange={setCategory} /><FilterGroup label="Size" options={sizes} value={size} onChange={setSize} /><FilterGroup label="Colour" options={colors} value={color} onChange={setColor} /><button className="text-link clear-filter" onClick={clear}>Clear filters</button><button className="button button-dark filter-done" onClick={() => setFiltersOpen(false)}>View {filtered.length} pieces</button></aside>{filtersOpen && <div className="filter-backdrop" onClick={() => setFiltersOpen(false)} />}<div className="shop-results">{filtered.length ? <div className="product-grid product-grid--three">{filtered.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Nothing in this formation" copy="Try a different filter or clear the rotation to see every piece." action={<button className="button button-dark" onClick={clear}>Clear filters</button>} />}</div></div></div></main>
 }
 
 function FilterGroup({ label, options, value, onChange }) { return <fieldset className="filter-group"><legend>{label}</legend>{options.map((option) => <label key={option} className="radio-row"><input type="radio" name={label} checked={value === option} onChange={() => onChange(option)} /><span>{option}</span><i /></label>)}</fieldset> }
 
 function EmptyState({ title, copy, action }) { return <div className="empty-state"><div className="empty-mark">SC</div><span className="eyebrow">Nothing here yet</span><h2>{title}</h2><p>{copy}</p>{action}</div> }
 
+function ProductGallery({ product }) {
+  const [lightboxIndex, setLightboxIndex] = useState(null)
+  const total = product.images.length
+  const previousImage = () => setLightboxIndex((index) => (index - 1 + total) % total)
+  const nextImage = () => setLightboxIndex((index) => (index + 1) % total)
+
+  useEffect(() => {
+    if (lightboxIndex === null) return undefined
+    const previousOverflow = document.body.style.overflow
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setLightboxIndex(null)
+      if (event.key === 'ArrowLeft') previousImage()
+      if (event.key === 'ArrowRight') nextImage()
+    }
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [lightboxIndex, total])
+
+  return <>
+    <div className="product-gallery">
+      <div className="product-gallery__header"><span>Image archive</span><span>{String(total).padStart(2, '0')} product views</span></div>
+      <div className="product-gallery__grid">
+        {product.images.map((src, index) => <button type="button" className="gallery-tile" key={src} onClick={() => setLightboxIndex(index)} aria-label={`Open ${product.name} image ${index + 1} of ${total}`}>
+          <CatalogImage src={src} alt={`${product.name} view ${index + 1}`} sizes="(max-width: 740px) 88vw, 34vw" loading={index === 0 ? 'eager' : 'lazy'} fetchPriority={index === 0 ? 'high' : undefined} />
+          <span className="gallery-tile__number">{String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span>
+          <span className="gallery-tile__zoom"><Icon name="plus" size={14} /> View</span>
+        </button>)}
+      </div>
+      <span className="product-gallery__swipe-note">Swipe to explore all {total} views</span>
+    </div>
+    {lightboxIndex !== null && createPortal(<div className="image-lightbox" role="dialog" aria-modal="true" aria-label={`${product.name} image viewer`} onClick={() => setLightboxIndex(null)}>
+      <button className="image-lightbox__close" type="button" onClick={() => setLightboxIndex(null)} aria-label="Close image viewer" autoFocus><Icon name="close" size={20} /></button>
+      <button className="image-lightbox__nav image-lightbox__nav--prev" type="button" onClick={(event) => { event.stopPropagation(); previousImage() }} aria-label="Previous product image"><Icon name="back" size={20} /></button>
+      <div className="image-lightbox__frame" onClick={(event) => event.stopPropagation()}>
+        <div className="image-lightbox__stage"><CatalogImage key={product.images[lightboxIndex]} src={product.images[lightboxIndex]} alt={`${product.name} enlarged view ${lightboxIndex + 1}`} sizes="90vw" /></div>
+        <div className="image-lightbox__caption"><div><span>{product.collection}</span><strong>{product.name}</strong></div><span>{String(lightboxIndex + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}</span></div>
+        <div className="image-lightbox__thumbs" aria-label="Choose product image">{product.images.map((src, index) => <button type="button" className={lightboxIndex === index ? 'is-active' : ''} key={src} onClick={() => setLightboxIndex(index)} aria-label={`Show image ${index + 1}`}><CatalogImage src={src} alt="" sizes="72px" loading="lazy" /></button>)}</div>
+      </div>
+      <button className="image-lightbox__nav image-lightbox__nav--next" type="button" onClick={(event) => { event.stopPropagation(); nextImage() }} aria-label="Next product image"><Icon name="arrow" size={20} /></button>
+    </div>, document.body)}
+  </>
+}
+
 function ProductPage({ product, wishlist, onToggleWishlist, onAddToCart }) {
-  const [activeImage, setActiveImage] = useState(0)
   const [size, setSize] = useState('')
   const [color, setColor] = useState(product.colors[0])
   const [quantity, setQuantity] = useState(1)
@@ -457,15 +618,16 @@ function ProductPage({ product, wishlist, onToggleWishlist, onAddToCart }) {
     window.setTimeout(() => setAddState('idle'), 1700)
   }
   useEffect(() => { const button = document.querySelector('.add-to-bag'); if (button) button.dataset.status = addState }, [addState])
-  return <main className="product-page"><div className="page-shell"><Breadcrumbs items={[{ label: product.category, path: `/shop/${product.category.toLowerCase().replace(' ', '-')}` }, { label: product.name }]} /><div className="product-detail"><div className="product-gallery"><div className="gallery-main"><img src={product.images[activeImage]} alt={`${product.name} view ${activeImage + 1}`} /><button className="zoom-hint" aria-label="Product image zoom">Click to zoom</button></div><div className="gallery-thumbs">{product.images.map((src, index) => <button key={src} className={activeImage === index ? 'is-active' : ''} onClick={() => setActiveImage(index)}><img src={src} alt={`${product.name} thumbnail ${index + 1}`} /></button>)}</div></div><div className="product-info"><span className="eyebrow">{product.collection} / {product.category}</span><h1>{product.name}</h1><div className="detail-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)} <span className="tax-note">incl. taxes</span></div><p className="detail-description">{product.description}</p><div className="selector-block"><div className="selector-label"><span>Colour</span><strong>{color}</strong></div><div className="swatches">{product.colors.map((item) => <button key={item} className={`swatch swatch--${item.toLowerCase().replace(/[^a-z0-9]/g, '')} ${color === item ? 'is-selected' : ''}`} onClick={() => setColor(item)} aria-label={`Select ${item}`}><span /></button>)}</div></div><div className="selector-block"><div className="selector-label"><span>Size</span><Link to="/size-guide">Size guide <Icon name="arrow" size={13} /></Link></div><div className="size-grid">{product.sizes.map((item) => <button key={item} className={size === item ? 'is-selected' : ''} onClick={() => setSize(item)}>{item}</button>)}</div>{!size && <span className="selection-note">Select a size to add this piece.</span>}</div><div className="add-row"><div className="quantity-control"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button onClick={() => setQuantity(Math.min(product.inventory || 1, quantity + 1))} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div><button className="button button-dark add-to-bag" onClick={add} disabled={!size || product.isSoldOut}>{product.isSoldOut ? 'Sold out' : !size ? 'Select a size' : 'Add to bag'} <Icon name="arrow" size={16} /></button><button className={`icon-button detail-wishlist ${wished ? 'is-active' : ''}`} onClick={() => onToggleWishlist(product.id)} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" /></button></div><div className="detail-notes"><div><span>Shipping</span><p>Ships in 2–4 business days across India.</p></div><div><span>Returns</span><p>Easy returns within 7 days of delivery.</p></div><div><span>Details</span><p>{product.material}. {product.careInstructions}</p></div></div><div className="sku-line"><span>SKU {product.sku}</span><span>Scudo Clothing</span></div></div></div><section className="product-lower"><div><span className="eyebrow">Reviews / 03</span><h2>Worn in the wild.</h2></div><div className="review-content"><div className="review-card"><div className="stars">★★★★★</div><p>“Good weight, easy fit. It’s become the jersey I reach for even when there isn’t a game on.”</p><span>— A. Mehta / Verified buyer</span></div><form className="review-form" onSubmit={(event) => { event.preventDefault(); setReviewSent(true) }}><span className="form-title">Leave a review</span><input required placeholder="Your name" aria-label="Your name" /><textarea required placeholder="What did you think?" aria-label="Your review" rows="3" /><button className="button button-ghost" type="submit">{reviewSent ? 'Review submitted' : 'Submit review'}</button></form></div></section><section className="section related-section"><SectionHeading eyebrow="Complete the rotation" title="You may also like" /><div className="product-grid product-grid--four">{products.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} onQuickAdd={(p) => onAddToCart(p, p.sizes[0], p.colors[0], 1)} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section></div></main>
+  return <main className="product-page"><div className="page-shell"><Breadcrumbs items={[{ label: product.category, path: `/shop/${product.category.toLowerCase().replace(' ', '-')}` }, { label: product.name }]} /><div className="product-detail"><ProductGallery product={product} /><div className="product-info"><span className="eyebrow">{product.collection} / {product.category}</span><h1>{product.name}</h1><div className="detail-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)} <span className="tax-note">incl. taxes</span></div><p className="detail-description">{product.description}</p><div className="selector-block"><div className="selector-label"><span>Colour</span><strong>{color}</strong></div><div className="swatches">{product.colors.map((item) => <button key={item} className={`swatch swatch--${item.toLowerCase().replace(/[^a-z0-9]/g, '')} ${color === item ? 'is-selected' : ''}`} onClick={() => setColor(item)} aria-label={`Select ${item}`}><span /></button>)}</div></div><div className="selector-block"><div className="selector-label"><span>Size</span><Link to="/size-guide">Size guide <Icon name="arrow" size={13} /></Link></div><div className="size-grid">{product.sizes.map((item) => <button key={item} className={size === item ? 'is-selected' : ''} onClick={() => setSize(item)}>{item}</button>)}</div>{!size && <span className="selection-note">Select a size to add this piece.</span>}</div><div className="add-row"><div className="quantity-control"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button onClick={() => setQuantity(Math.min(product.inventory || 1, quantity + 1))} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div><button className="button button-dark add-to-bag" onClick={add} disabled={!size || product.isSoldOut}>{product.isSoldOut ? 'Sold out' : !size ? 'Select a size' : 'Add to bag'} <Icon name="arrow" size={16} /></button><button className={`icon-button detail-wishlist ${wished ? 'is-active' : ''}`} onClick={() => onToggleWishlist(product.id)} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" /></button></div><div className="detail-notes"><div><span>Shipping</span><p>Ships in 2–4 business days across India.</p></div><div><span>Returns</span><p>Easy returns within 7 days of delivery.</p></div><div><span>Details</span><p>{product.material}. {product.careInstructions}</p></div></div><div className="sku-line"><span>SKU {product.sku}</span><span>Scudo Clothing</span></div></div></div><section className="product-lower"><div><span className="eyebrow">Reviews / 03</span><h2>Worn in the wild.</h2></div><div className="review-content"><div className="review-card"><div className="stars">★★★★★</div><p>“Good weight, easy fit. It’s become the jersey I reach for even when there isn’t a game on.”</p><span>— A. Mehta / Verified buyer</span></div><form className="review-form" onSubmit={(event) => { event.preventDefault(); setReviewSent(true) }}><span className="form-title">Leave a review</span><input required placeholder="Your name" aria-label="Your name" /><textarea required placeholder="What did you think?" aria-label="Your review" rows="3" /><button className="button button-ghost" type="submit">{reviewSent ? 'Review submitted' : 'Submit review'}</button></form></div></section><section className="section related-section"><SectionHeading eyebrow="Complete the rotation" title="You may also like" /><div className="product-grid product-grid--four">{products.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} onQuickAdd={(p) => onAddToCart(p, p.sizes[0], p.colors[0], 1)} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section></div></main>
 }
 
 function CartDrawer({ open, onClose, cart, onUpdateQuantity, onRemove, onCheckout }) {
+  const drawerRef = useOverlayFocus(open, onClose)
   const subtotal = cart.reduce((total, item) => total + (item.product.salePrice || item.product.price) * item.quantity, 0)
-  return open ? <div className="drawer-overlay" onClick={onClose}><aside className="cart-drawer" onClick={(event) => event.stopPropagation()}><div className="drawer-head"><div><span className="eyebrow">Your rotation</span><h2>Shopping bag <small>{cart.reduce((a, i) => a + i.quantity, 0)}</small></h2></div><button className="icon-button" onClick={onClose} aria-label="Close shopping bag"><Icon name="close" /></button></div>{cart.length ? <><div className="drawer-items">{cart.map((item) => <CartLine key={`${item.product.id}-${item.size}-${item.color}`} item={item} onUpdateQuantity={onUpdateQuantity} onRemove={onRemove} compact />)}</div><div className="drawer-summary"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><p>Shipping calculated at checkout.</p><button className="button button-dark" onClick={onCheckout}>Go to checkout <Icon name="arrow" size={16} /></button><Link to="/cart" className="text-link" onClick={onClose}>View bag</Link></div></> : <EmptyState title="Your bag is empty" copy="Add a piece and it will show up here." action={<Link to="/shop" className="button button-dark" onClick={onClose}>Shop the rotation</Link>} />}</aside></div> : null
+  return open ? <div className="drawer-overlay" onClick={onClose}><aside className="cart-drawer" ref={drawerRef} onClick={(event) => event.stopPropagation()} aria-label="Shopping bag"><div className="drawer-head"><div><span className="eyebrow">Your rotation</span><h2>Shopping bag <small>{cart.reduce((a, i) => a + i.quantity, 0)}</small></h2></div><button className="icon-button" onClick={onClose} aria-label="Close shopping bag"><Icon name="close" /></button></div>{cart.length ? <><div className="drawer-items">{cart.map((item) => <CartLine key={`${item.product.id}-${item.size}-${item.color}`} item={item} onUpdateQuantity={onUpdateQuantity} onRemove={onRemove} compact />)}</div><div className="drawer-summary"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><p>Shipping calculated at checkout.</p><button className="button button-dark" onClick={onCheckout}>Go to checkout <Icon name="arrow" size={16} /></button><Link to="/cart" className="text-link" onClick={onClose}>View bag</Link></div></> : <EmptyState title="Your bag is empty" copy="Add a piece and it will show up here." action={<Link to="/shop" className="button button-dark" onClick={onClose}>Shop the rotation</Link>} />}</aside></div> : null
 }
 
-function CartLine({ item, onUpdateQuantity, onRemove, compact = false }) { const price = item.product.salePrice || item.product.price; return <div className={`cart-line ${compact ? 'cart-line--compact' : ''}`}><img src={item.product.images[0]} alt={item.product.name} /><div className="cart-line-info"><Link to={`/product/${item.product.slug}`}>{item.product.name}</Link><span>{item.color} / {item.size}</span><strong>{formatMoney(price * item.quantity)}</strong><div className="mini-quantity"><button onClick={() => onUpdateQuantity(item.key, item.quantity - 1)} aria-label="Decrease quantity"><Icon name="minus" size={12} /></button><span>{item.quantity}</span><button onClick={() => onUpdateQuantity(item.key, item.quantity + 1)} aria-label="Increase quantity"><Icon name="plus" size={12} /></button></div></div><button className="remove-line" onClick={() => onRemove(item.key)} aria-label={`Remove ${item.product.name}`}><Icon name="close" size={15} /></button></div> }
+function CartLine({ item, onUpdateQuantity, onRemove, compact = false }) { const price = item.product.salePrice || item.product.price; return <div className={`cart-line ${compact ? 'cart-line--compact' : ''}`}><CatalogImage src={item.product.images[0]} alt={item.product.name} sizes="155px" /><div className="cart-line-info"><Link to={`/product/${item.product.slug}`}>{item.product.name}</Link><span>{item.color} / {item.size}</span><strong>{formatMoney(price * item.quantity)}</strong><div className="mini-quantity"><button onClick={() => onUpdateQuantity(item.key, item.quantity - 1)} aria-label="Decrease quantity"><Icon name="minus" size={12} /></button><span>{item.quantity}</span><button onClick={() => onUpdateQuantity(item.key, item.quantity + 1)} aria-label="Increase quantity"><Icon name="plus" size={12} /></button></div></div><button className="remove-line" onClick={() => onRemove(item.key)} aria-label={`Remove ${item.product.name}`}><Icon name="close" size={15} /></button></div> }
 
 function CartPage({ cart, onUpdateQuantity, onRemove, onCheckout }) {
   const subtotal = cart.reduce((total, item) => total + (item.product.salePrice || item.product.price) * item.quantity, 0)
@@ -498,7 +660,7 @@ function OrderConfirmation({ order }) { return <main className="confirmation-pag
 
 function WishlistPage({ wishlist, onToggleWishlist, onQuickAdd }) { const wished = products.filter((product) => wishlist.includes(product.id)); return <main className="shop-page wishlist-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Wishlist' }]} /><div className="shop-heading"><div><span className="eyebrow">Saved for later</span><h1>Your wishlist</h1></div><p>{wished.length ? `${wished.length} pieces saved.` : 'Keep the good ones close.'}</p></div>{wished.length ? <div className="product-grid product-grid--four">{wished.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Your list is quiet" copy="Tap the heart on a piece to save it for later." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} />}</div></main> }
 
-function CollectionsPage() { return <main className="collections-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Collections' }]} /><div className="shop-heading"><div><span className="eyebrow">The edit</span><h1>Collections</h1></div><p>Different moods, one point of view.</p></div><div className="collection-list">{collections.map((collection, index) => <Link to={collection.path} className={`collection-feature collection-feature--${collection.tone}`} key={collection.title}><img src={collection.image} alt={`${collection.title} collection`} /><div><span className="eyebrow">{collection.eyebrow}</span><h2>{collection.title}</h2><p>{collection.copy}</p><span className="text-link">Explore collection <Icon name="arrow" size={15} /></span></div><span className="collection-number">0{index + 1}</span></Link>)}</div></div></main> }
+function CollectionsPage() { return <main className="collections-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Collections' }]} /><div className="shop-heading"><div><span className="eyebrow">The edit</span><h1>Collections</h1></div><p>Different moods, one point of view.</p></div><div className="collection-list">{collections.map((collection, index) => <Link to={collection.path} className={`collection-feature collection-feature--${collection.tone}`} key={collection.title}><CatalogImage src={collection.image} alt={`${collection.title} collection`} sizes="(max-width: 740px) 100vw, 50vw" loading="lazy" /><div><span className="eyebrow">{collection.eyebrow}</span><h2>{collection.title}</h2><p>{collection.copy}</p><span className="text-link">Explore collection <Icon name="arrow" size={15} /></span></div><span className="collection-number">0{index + 1}</span></Link>)}</div></div></main> }
 
 function InfoPage({ type }) {
   const content = { about: { eyebrow: 'The Scudo idea', title: <>Not a kit.<br /><em>A point of view.</em></>, intro: 'Scudo Clothing is a football-inspired streetwear label for people who see the game as more than a scoreline.', sections: [['The 90 minutes and everything after', 'We make pieces for the full day around the game — the walk to the stadium, the first coffee, the late train home, and every ordinary moment in between.'], ['Our first team sheet', 'Scudo starts with small, considered drops: relaxed shapes, familiar colours, and details that feel lived-in from the first wear. The goal is simple — build an everyday rotation that carries a little matchday energy.']] }, 'size-guide': { eyebrow: 'Find your fit', title: <>The right<br /><em>formation.</em></>, intro: 'Our fits are designed with room to move. Take your usual size for an easy fit, or size down for a closer silhouette.', sections: [['T-shirts & jerseys', 'Measure around the chest at the fullest point. Compare with the chart below. Jerseys are designed to feel relaxed.'], ['Size guide', 'S — 36–38 in chest · M — 39–41 in chest · L — 42–44 in chest · XL — 45–47 in chest · XXL — 48–50 in chest']] }, 'shipping-returns': { eyebrow: 'Customer care', title: <>Keep it<br /><em>moving.</em></>, intro: 'We keep shipping and returns straightforward so you can focus on the pieces, not the process.', sections: [['Shipping', 'Orders ship across India in 2–4 business days. You’ll receive tracking details once your order leaves us. Shipping costs are calculated at checkout.'], ['Returns', 'Unused pieces can be returned within 7 days of delivery. Please keep original tags attached. Start a return by emailing hello@scudoclothing.com.']] }, contact: { eyebrow: 'Say hello', title: <>Over to<br /><em>you.</em></>, intro: 'Questions about a piece, a fit, or a future drop? The line is open.', sections: [['Email', 'hello@scudoclothing.com'], ['Hours', 'Monday–Friday, 10:00–18:00 IST. We aim to reply within two business days.']] }, privacy: { eyebrow: 'Legal / Privacy', title: <>Your data,<br /><em>handled lightly.</em></>, intro: 'This starter policy page is intentionally concise and should be reviewed with your legal advisor before launch.', sections: [['What we collect', 'We collect the details needed to process an order, provide support, and send updates when you choose to subscribe. We do not store raw card information.'], ['Your choices', 'Email hello@scudoclothing.com to ask about access, correction, or deletion of personal information.']] }, terms: { eyebrow: 'Legal / Terms', title: <>The ground<br /><em>rules.</em></>, intro: 'These starter terms outline the basic store relationship and should be reviewed with your legal advisor before launch.', sections: [['Orders', 'Product availability, pricing, and content are editable store fields. An order is confirmed only after the configured payment provider accepts it.'], ['Returns & support', 'Please follow the current shipping and returns policy for eligibility. Contact hello@scudoclothing.com for help with an order.']] } }[type]
@@ -526,7 +688,8 @@ function AuthForm({ onSuccess, compact = false }) {
 }
 
 function AuthGate({ onClose, onAuthenticated }) {
-  return <div className="auth-gate-overlay" onClick={onClose}><aside className="auth-gate-card" onClick={(event) => event.stopPropagation()}><button className="icon-button auth-gate-close" onClick={onClose} aria-label="Close login panel"><Icon name="close" /></button><ScudoLogo size="sm" showSubtitle={false} showShadow={false} /><span className="eyebrow">Members first</span><h2>Sign in to add<br /><em>to your bag.</em></h2><p>Create an account or log in to keep your rotation saved.</p><AuthForm onSuccess={onAuthenticated} compact /></aside></div>
+  const panelRef = useOverlayFocus(true, onClose)
+  return <div className="auth-gate-overlay" onClick={onClose}><aside className="auth-gate-card" ref={panelRef} onClick={(event) => event.stopPropagation()} aria-label="Sign in required"><button className="icon-button auth-gate-close" onClick={onClose} aria-label="Close login panel"><Icon name="close" /></button><ScudoLogo size="sm" showSubtitle={false} showShadow={false} /><span className="eyebrow">Members first</span><h2>Sign in to add<br /><em>to your bag.</em></h2><p>Create an account or log in to keep your rotation saved.</p><AuthForm onSuccess={onAuthenticated} compact /></aside></div>
 }
 
 function AccountPage({ account, onAuthenticate, onLogout }) {
