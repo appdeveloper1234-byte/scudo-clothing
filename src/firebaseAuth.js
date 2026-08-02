@@ -86,6 +86,11 @@ export function firebaseAuthErrorMessage(error, method = 'google') {
     'auth/network-request-failed': 'The network interrupted Google sign-in. Please try again.',
     'auth/unauthorized-domain': 'This website domain is not authorized in Firebase Authentication.',
     'auth/operation-not-allowed': 'Google sign-in must be enabled in the Firebase Authentication console.',
+    'auth/web-storage-unsupported': 'This browser is blocking the storage Google sign-in needs. Allow site storage or try another browser.',
+    'auth/operation-not-supported-in-this-environment': 'Google sign-in is not supported inside this browser window. Open the website in Chrome, Edge, Safari, or Firefox.',
+    'auth/internal-error': 'Google sign-in was interrupted by the browser security policy. Refresh the page and try again.',
+    'auth/invalid-api-key': 'The deployed Firebase API key is invalid. Update the Firebase environment variables in Netlify.',
+    'auth/configuration-not-found': 'Firebase Authentication is not configured for this project.',
     'auth/account-exists-with-different-credential': 'An account already exists with this email using another sign-in method.',
     'auth/email-already-in-use': 'An account already exists with this email address.',
     'auth/invalid-email': 'Enter a valid email address.',
@@ -93,5 +98,6 @@ export function firebaseAuthErrorMessage(error, method = 'google') {
     'auth/weak-password': 'Use a stronger password with at least six characters.',
     'auth/too-many-requests': 'Too many sign-in attempts. Please wait and try again.'
   }
-  return messages[error?.code] || `${method === 'google' ? 'Google sign-in' : 'Account authentication'} could not be completed. Please try again.`
+  const code = typeof error?.code === 'string' ? error.code : 'unknown-error'
+  return messages[code] || `${method === 'google' ? 'Google sign-in' : 'Account authentication'} could not be completed (${code}). Please try again.`
 }
