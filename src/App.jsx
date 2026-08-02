@@ -365,6 +365,7 @@ function Header({ cartCount, wishlistCount, onCartOpen, account }) {
 
 function Footer() {
   return <footer className="site-footer">
+    <div className="footer-wordmark" aria-hidden="true"><span>scudo</span><small>Clothings / India</small></div>
     <div className="footer-top">
       <div className="footer-brand">
         <ScudoLogo variant="reference" size="sm" />
@@ -424,14 +425,18 @@ function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
   return <main className="home-page">
     <section className="hero hero--campaign">
       <div className="hero-copy">
-        <div className="hero-kicker"><span>Scudo / Matchday edit</span><i /></div>
+        <div className="hero-kicker"><span>Scudo / Matchday edit</span><i /><b>01 / 26</b></div>
         <h1 className="hero-armour-title" aria-label="Armour for everyday">
-          <span className="hero-line"><span>Armour</span></span>
-          <span className="hero-line"><span>for <em>everyday.</em></span></span>
+          <span className="hero-line hero-line--primary"><span>Armour</span></span>
+          <span className="hero-line hero-line--accent"><span><small>for</small><em>everyday.</em></span></span>
         </h1>
-        <p className="hero-deck">Two iconic shirts, selected for the match and everything that follows.</p>
-        <div className="button-row"><Link to="/shop/jerseys" className="button button-ghost hero-shop-button">Explore all shirts <Icon name="arrow" size={17} /></Link></div>
-        <div className="hero-meta" aria-label="Collection details"><span>02 curated shirts</span><span>Drop 01 / 2026</span><span>Final sale</span></div>
+        <p className="hero-deck">Iconic shirts selected for the match, the walk home, and everything after the final whistle.</p>
+        <div className="button-row"><Link to="/shop/jerseys" className="button hero-shop-button"><span>Explore all shirts</span><span className="hero-shop-button__icon"><Icon name="arrow" size={17} /></span></Link></div>
+        <div className="hero-meta" aria-label="Collection details">
+          <div><span>Edition</span><strong>Drop 01</strong></div>
+          <div><span>Selection</span><strong>02 shirts</strong></div>
+          <div><span>Policy</span><strong>Final sale</strong></div>
+        </div>
       </div>
       <div className={`hero-visual hero-visual--${heroProduct.id}`}>
         <span className="hero-stage-label">The matchday rotation</span>
@@ -445,6 +450,7 @@ function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
     <section className="section shop-all-section" aria-labelledby="shop-all-title">
       <div className="shop-all-heading">
         <div><span className="eyebrow">The full rotation</span><h2 id="shop-all-title">Shop all</h2></div>
+        <div className="shop-all-note"><strong>{String(products.length).padStart(2, '0')} pieces</strong><span>Current Scudo rotation<br />curated for everyday wear.</span></div>
       </div>
       <div className="shop-all-grid">{products.map((product, index) => <div className="shop-all-grid__item" key={product.id} style={{ '--reveal-index': index }}><ProductCard product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} /></div>)}</div>
     </section>
