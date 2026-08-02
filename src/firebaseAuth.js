@@ -12,13 +12,36 @@ import {
   updateProfile
 } from 'firebase/auth'
 
+const cleanEnvironmentValue = (value) => value
+  ?.trim()
+  .replace(/^['"]|['"]$/g, '')
+
+const projectId = cleanEnvironmentValue(import.meta.env.VITE_FIREBASE_PROJECT_ID)
+
+const normalizeAuthDomain = (value) => {
+  const configuredDomain = cleanEnvironmentValue(value)
+  if (!configuredDomain) return projectId ? `${projectId}.firebaseapp.com` : ''
+
+  try {
+    const domainUrl = /^https?:\/\//i.test(configuredDomain)
+      ? new URL(configuredDomain)
+      : new URL(`https://${configuredDomain}`)
+    return domainUrl.hostname
+  } catch {
+    return configuredDomain
+      .replace(/^https?:\/\//i, '')
+      .split('/')[0]
+      .trim()
+  }
+}
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY?.trim(),
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN?.trim(),
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID?.trim(),
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET?.trim(),
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID?.trim(),
-  appId: import.meta.env.VITE_FIREBASE_APP_ID?.trim()
+  apiKey: cleanEnvironmentValue(import.meta.env.VITE_FIREBASE_API_KEY),
+  authDomain: normalizeAuthDomain(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN),
+  projectId,
+  storageBucket: cleanEnvironmentValue(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: cleanEnvironmentValue(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID),
+  appId: cleanEnvironmentValue(import.meta.env.VITE_FIREBASE_APP_ID)
 }
 
 export const isFirebaseConfigured = ['apiKey', 'authDomain', 'projectId', 'appId']

@@ -412,48 +412,41 @@ function Breadcrumbs({ items }) { return <div className="breadcrumbs"><Link to="
 function SectionHeading({ eyebrow, title, copy, action }) { return <div className="section-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div>{copy && <p>{copy}</p>}{action}</div> }
 
 function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
-  const campaignProducts = ['portugal-black-special', 'argentina-champions-home', 'france-away'].map((id) => products.find((product) => product.id === id)).filter(Boolean)
+  const campaignProducts = ['portugal-black-special', 'real-madrid-home'].map((id) => products.find((product) => product.id === id)).filter(Boolean)
   const [heroIndex, setHeroIndex] = useState(0)
-  const [shopCarouselPage, setShopCarouselPage] = useState(0)
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
     const interval = window.setInterval(() => { if (!document.hidden) setHeroIndex((index) => (index + 1) % campaignProducts.length) }, 5600)
     return () => window.clearInterval(interval)
   }, [campaignProducts.length])
   const heroProduct = campaignProducts[heroIndex] || products[0]
-  const shopCarouselPageCount = Math.ceil(products.length / 3)
-  const shopCarouselProducts = Array.from({ length: Math.min(3, products.length) }, (_, offset) => products[((shopCarouselPage * 3) + offset) % products.length])
   const tickerItems = ['Master version', 'Player version', 'Affordable kits', 'International shirts', 'Made for after full time']
   return <main className="home-page">
     <section className="hero hero--campaign">
       <div className="hero-copy">
+        <div className="hero-kicker"><span>Scudo / Matchday edit</span><i /></div>
         <h1 className="hero-armour-title" aria-label="Armour for everyday">
           <span className="hero-line"><span>Armour</span></span>
-          <span className="hero-line"><span>For</span></span>
-          <span className="hero-line"><span>Everyday</span></span>
+          <span className="hero-line"><span>for <em>everyday.</em></span></span>
         </h1>
+        <p className="hero-deck">Two iconic shirts, selected for the match and everything that follows.</p>
         <div className="button-row"><Link to="/shop/jerseys" className="button button-ghost hero-shop-button">Explore all shirts <Icon name="arrow" size={17} /></Link></div>
-        <div className="hero-proof" aria-label="Store highlights"><div><strong>11</strong><span>shirts in rotation</span></div><div><strong>03</strong><span>curated edits</span></div><div><strong>FINAL</strong><span>sale / no returns</span></div></div>
+        <div className="hero-meta" aria-label="Collection details"><span>02 curated shirts</span><span>Drop 01 / 2026</span><span>Final sale</span></div>
       </div>
-      <div className="hero-visual">
-        <div className="hero-ghost-word" aria-hidden="true">SCUDO</div>
-        <CatalogImage key={heroProduct.id} src={heroProduct.images[0]} alt={`${heroProduct.name} editorial product image`} sizes="(max-width: 740px) 100vw, 58vw" loading="eager" fetchPriority="high" />
-        <div className="hero-stamp"><span>SC</span><span>{String(heroIndex + 1).padStart(2, '0')} / 03</span></div>
+      <div className={`hero-visual hero-visual--${heroProduct.id}`}>
+        <span className="hero-stage-label">The matchday rotation</span>
+        <CatalogImage key={heroProduct.id} src={heroProduct.images[0]} alt={`${heroProduct.name} product image`} sizes="(max-width: 740px) 100vw, 56vw" loading="eager" fetchPriority="high" />
+        <div className="hero-stamp"><span>{String(heroIndex + 1).padStart(2, '0')}</span><span>/ {String(campaignProducts.length).padStart(2, '0')}</span></div>
         <button className="hero-next" type="button" onClick={() => setHeroIndex((current) => (current + 1) % campaignProducts.length)} aria-label="Show next campaign product"><Icon name="arrow" size={20} /></button>
         <div className="hero-selector" aria-label="Campaign products">{campaignProducts.map((product, index) => <button key={product.id} className={heroIndex === index ? 'is-active' : ''} onClick={() => setHeroIndex(index)} aria-label={`Show ${product.name}`} aria-pressed={heroIndex === index}><span>{String(index + 1).padStart(2, '0')}</span><i /></button>)}</div>
       </div>
     </section>
     <section className="campaign-ticker" aria-label="Scudo clothing edits"><div className="campaign-ticker__track">{[0, 1].map((copy) => <div key={copy} aria-hidden={copy === 1}>{tickerItems.map((item) => <span key={`${copy}-${item}`}>{item}<i>✦</i></span>)}</div>)}</div></section>
-    <section className="section shop-carousel-section" aria-labelledby="shop-carousel-title">
-      <div className="shop-carousel-heading">
-        <div><span className="eyebrow">The full rotation</span><h2 id="shop-carousel-title">Shop all</h2></div>
-        <div className="shop-carousel-controls" aria-label="Browse shop products">
-          <span>{String(shopCarouselPage + 1).padStart(2, '0')} / {String(shopCarouselPageCount).padStart(2, '0')}</span>
-          <button type="button" onClick={() => setShopCarouselPage((page) => (page - 1 + shopCarouselPageCount) % shopCarouselPageCount)} aria-label="Show previous three products"><Icon name="back" size={20} /></button>
-          <button type="button" onClick={() => setShopCarouselPage((page) => (page + 1) % shopCarouselPageCount)} aria-label="Show next three products"><Icon name="arrow" size={20} /></button>
-        </div>
+    <section className="section shop-all-section" aria-labelledby="shop-all-title">
+      <div className="shop-all-heading">
+        <div><span className="eyebrow">The full rotation</span><h2 id="shop-all-title">Shop all</h2></div>
       </div>
-      <div className="shop-carousel-grid" key={shopCarouselPage} aria-live="polite">{shopCarouselProducts.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div>
+      <div className="shop-all-grid">{products.map((product, index) => <div className="shop-all-grid__item" key={product.id} style={{ '--reveal-index': index }}><ProductCard product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} /></div>)}</div>
     </section>
     <section className="editorial-image-section" aria-label="Armour for everyday campaign">
       <img src="/editorial/armour-for-everyday.png" alt="Scudo Armour for Everyday campaign featuring a black football shirt and the message More than a jersey, it is matchday culture" width="1844" height="576" loading="lazy" decoding="async" />
