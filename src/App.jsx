@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { products } from './productCatalog.js'
 import { payWithRazorpay } from './razorpay.js'
+import { authenticateWithEmail, firebaseAuthErrorMessage, signInWithGoogle, signOutFirebase, watchFirebaseAuth } from './firebaseAuth.js'
 
 const catalogImages = (slug, count) => Array.from({ length: count }, (_, index) => `/catalog/${slug}/${String(index + 1).padStart(2, '0')}.webp`)
 const catalogVariant = (src, width) => src.replace(/\.webp$/, `-${width}.webp`)
@@ -89,6 +90,10 @@ function Icon({ name, size = 18 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
+function GoogleIcon() {
+  return <svg className="google-auth-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.24-.2-1.79H12v3.48h5.52a4.72 4.72 0 0 1-2.05 3.09v2.26h3.32c1.94-1.79 2.81-4.42 2.81-7.04Z" /><path fill="#34A853" d="M12 22c2.7 0 4.96-.89 6.61-2.42l-3.32-2.57c-.89.6-2.03.96-3.29.96-2.6 0-4.81-1.76-5.6-4.13H2.98v2.64A10 10 0 0 0 12 22Z" /><path fill="#FBBC05" d="M6.4 13.84A6 6 0 0 1 6.08 12c0-.64.11-1.26.32-1.84V7.52H2.98A10 10 0 0 0 2 12c0 1.61.38 3.13.98 4.48l3.42-2.64Z" /><path fill="#EA4335" d="M12 6.03c1.47 0 2.78.5 3.82 1.49l2.87-2.87A9.65 9.65 0 0 0 12 2a10 10 0 0 0-9.02 5.52l3.42 2.64C7.19 7.79 9.4 6.03 12 6.03Z" /></svg>
+}
+
 export function ScudoLogo({ size = 'md', variant = 'reference', showSubtitle = true, showShadow = true, primaryColor, accentColor, className = '', mode = 'stacked' }) {
   const maskId = `scudo-shirt-${useId().replace(/:/g, '')}`
   const light = variant === 'light'
@@ -104,9 +109,9 @@ export function ScudoLogo({ size = 'md', variant = 'reference', showSubtitle = t
   }
   return (
     <div className={`scudo-logo scudo-logo--${size} scudo-logo--${variant} ${horizontal ? 'scudo-logo--horizontal' : ''} ${markOnly ? 'scudo-logo--mark-only' : ''} ${sOnly ? 'scudo-logo--s-only' : ''} ${showShadow ? 'has-logo-shadow' : ''} ${className}`} style={style} aria-label="Scudo Clothing" role="img">
-      {!sOnly && <svg className="scudo-logo__shirt" viewBox="0 0 180 150" aria-hidden="true" focusable="false"><title>Scudo Clothing shirt mark</title><defs><mask id={maskId}><rect width="180" height="150" fill="white" /><path d="M65 10Q90 42 115 10Q111 43 90 47Q69 43 65 10Z" fill="black" /></mask></defs><path className="scudo-logo__shirt-fill" d="M64 10 23 22 10 68 42 79 54 52 47 140H133L126 52 138 79 170 68 157 22 116 10C111 25 103 32 90 32S69 25 64 10Z" fill="var(--logo-accent)" mask={`url(#${maskId})`} /><path className="scudo-logo__shirt-outline" d="M64 10 23 22 10 68 42 79 54 52 47 140H133L126 52 138 79 170 68 157 22 116 10C111 25 103 32 90 32S69 25 64 10Z" fill="none" stroke="var(--logo-accent)" strokeWidth="2" vectorEffect="non-scaling-stroke" mask={`url(#${maskId})`} /></svg>}
+      {!sOnly && <svg className="scudo-logo__shirt" viewBox="0 0 240 190" aria-hidden="true" focusable="false"><title>Scudo Clothing shirt mark</title><defs><mask id={maskId}><rect width="240" height="190" fill="white" /><path d="M130 23C143 38 158 45 180 43C170 59 145 58 130 23Z" fill="black" /></mask></defs><path className="scudo-logo__shirt-fill" d="M49 36 133 21C144 33 160 41 180 41L229 89 197 124 171 108 148 184 54 155 78 75 40 68Z" fill="var(--logo-accent)" mask={`url(#${maskId})`} /><path className="scudo-logo__shirt-outline" d="M49 36 133 21C144 33 160 41 180 41L229 89 197 124 171 108 148 184 54 155 78 75 40 68Z" fill="none" stroke="var(--logo-accent)" strokeWidth="2" strokeLinejoin="round" vectorEffect="non-scaling-stroke" mask={`url(#${maskId})`} /></svg>}
       {sOnly && <span className="scudo-logo__s">S</span>}
-      {!markOnly && !sOnly && <div className="scudo-logo__word">{['s', 'c', 'u', 'D', 'o'].map((letter, index) => <span key={`${letter}-${index}`} className={`scudo-logo__letter ${letter === 'D' ? 'scudo-logo__letter--capital-d' : ''}`} style={{ '--letter-index': index }}>{letter}</span>)}</div>}
+      {!markOnly && !sOnly && <div className="scudo-logo__word" aria-hidden="true">{['s', 'c', 'u', 'd', 'o'].map((letter, index) => <span key={`${letter}-${index}`} className={`scudo-logo__letter scudo-logo__letter--${letter}`} style={{ '--letter-index': index }}>{letter}</span>)}</div>}
       {showSubtitle && !markOnly && !sOnly && <div className="scudo-logo__subtitle">CLOTHINGS</div>}
     </div>
   )
@@ -129,7 +134,7 @@ function BrandIntro({ onComplete }) {
     timers.current.forEach(window.clearTimeout)
     setPhase('skipped')
     setLeaving(true)
-    timers.current = [window.setTimeout(complete, 360)]
+    timers.current = [window.setTimeout(complete, 740)]
   }
 
   useEffect(() => {
@@ -138,7 +143,12 @@ function BrandIntro({ onComplete }) {
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     let cancelled = false
     const start = async () => {
-      try { await document.fonts?.ready } catch {}
+      try {
+        await Promise.race([
+          document.fonts?.load('900 116px "Scudo Recoleta"') || Promise.resolve(),
+          new Promise((resolve) => window.setTimeout(resolve, 280))
+        ])
+      } catch {}
       if (cancelled) return
       window.requestAnimationFrame(() => setPhase('active'))
       if (reducedMotion) {
@@ -163,21 +173,7 @@ function BrandIntro({ onComplete }) {
   }, [])
   return <div className={`brand-intro brand-intro--${phase} ${leaving ? 'brand-intro--leaving' : ''}`} role="dialog" aria-modal="true" aria-label="Scudo Clothing brand introduction">
     <span className="brand-intro__wash" aria-hidden="true" />
-    <span className="brand-intro__grid" aria-hidden="true" />
-    <svg className="brand-intro__orbits" viewBox="0 0 640 420" aria-hidden="true">
-      <ellipse className="brand-intro__orbit brand-intro__orbit--outer" cx="320" cy="210" rx="282" ry="174" />
-      <ellipse className="brand-intro__orbit brand-intro__orbit--inner" cx="320" cy="210" rx="244" ry="142" />
-      <circle className="brand-intro__node brand-intro__node--one" cx="562" cy="150" r="4" />
-      <circle className="brand-intro__node brand-intro__node--two" cx="96" cy="265" r="3" />
-    </svg>
-    <span className="brand-intro__corner brand-intro__corner--tl" aria-hidden="true" />
-    <span className="brand-intro__corner brand-intro__corner--tr" aria-hidden="true" />
-    <span className="brand-intro__corner brand-intro__corner--bl" aria-hidden="true" />
-    <span className="brand-intro__corner brand-intro__corner--br" aria-hidden="true" />
-    <span className="brand-intro__sequence">SCUDO / MOTION STUDY 01</span>
-    <div className="brand-intro__lockup"><span className="brand-intro__core" aria-hidden="true" /><ScudoLogo size="md" showSubtitle showShadow className="brand-intro__logo" /><span className="brand-intro__sweep" aria-hidden="true" /></div>
-    <span className="brand-intro__caption">THE 90 MINUTES / AND EVERYTHING AFTER</span>
-    <div className="brand-intro__progress" aria-hidden="true"><span /></div>
+    <div className="brand-intro__lockup"><ScudoLogo size="md" showSubtitle showShadow className="brand-intro__logo" /><span className="brand-intro__sweep" aria-hidden="true" /></div>
     <button className="brand-intro__skip" type="button" onClick={skip}>Skip intro <Icon name="arrow" size={14} /></button>
   </div>
 }
@@ -249,7 +245,7 @@ function useMotionSystem(route) {
   useEffect(() => {
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     const root = document.documentElement
-    const motionSelector = '.hero-copy, .hero-visual, .campaign-ticker, .section-heading, .campaign-product-lead, .campaign-product-side, .product-card, .image-index-card, .editorial-image-section, .collection-card, .story-image, .story-copy, .benefit, .shop-heading, .shop-toolbar, .shop-results, .product-gallery, .gallery-tile, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
+    const motionSelector = '.hero-copy, .hero-visual, .campaign-ticker, .section-heading, .campaign-product-lead, .campaign-product-side, .product-card, .editorial-image-section, .collection-card, .story-image, .story-copy, .benefit, .shop-heading, .shop-toolbar, .shop-results, .product-gallery, .gallery-tile, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
     const updateScrollState = () => {
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight
       const progress = maxScroll > 0 ? Math.min(1, window.scrollY / maxScroll) : 0
@@ -363,7 +359,7 @@ function Header({ cartCount, wishlistCount, onCartOpen, account }) {
         </div>
       </div>
     </header>
-    {menuOpen && <div className="mobile-menu-overlay" onClick={closeMenu}><aside className="mobile-drawer" ref={menuRef} onClick={(event) => event.stopPropagation()} aria-label="Categories menu"><div className="drawer-top"><button className="drawer-close" onClick={closeMenu} aria-label="Close categories menu"><Icon name="close" /></button><span className="drawer-title">Categories</span><span className="drawer-top-spacer" /></div><div className="menu-featured" aria-label="Featured collections">{menuCards.map((card) => <Link key={card.label} to={card.path} onClick={closeMenu}><div className="menu-featured__image"><CatalogImage src={card.image} alt={`${card.label} category`} sizes="160px" loading="eager" /></div><span>{card.label}</span></Link>)}</div><div className="menu-section-label">Scudo / Categories</div><nav className="category-nav" aria-label="Scudo categories">{menuCategories.map((item) => <Link key={item.label} to={item.path} onClick={closeMenu}><span><strong>{item.label}</strong><small>{item.note}</small></span><Icon name="arrow" size={18} /></Link>)}</nav><div className="drawer-secondary"><Link to="/shop/jerseys" onClick={closeMenu}>Jerseys</Link><Link to="/shop/t-shirts" onClick={closeMenu}>T-shirts</Link><Link to="/collections" onClick={closeMenu}>Collections</Link><Link to="/about" onClick={closeMenu}>About</Link></div><div className="drawer-account-links"><Link to={account ? '/orders' : '/account'} onClick={closeMenu}>{account ? 'Your orders' : 'Log in / Sign up'} <Icon name="arrow" size={15} /></Link><Link to="/wishlist" onClick={closeMenu}>Wishlist {wishlistCount > 0 && `(${wishlistCount})`} <Icon name="heart" size={15} /></Link>{account && <Link to="/settings" onClick={closeMenu}>Settings <Icon name="arrow" size={15} /></Link>}</div><div className="mobile-menu-footer"><Link to="/size-guide" onClick={closeMenu}>Size guide</Link><Link to="/shipping-final-sale" onClick={closeMenu}>Shipping & final sale</Link><Link to="/contact" onClick={closeMenu}>Contact</Link></div></aside></div>}
+    {menuOpen && <div className="mobile-menu-overlay" onClick={closeMenu}><aside className="mobile-drawer" ref={menuRef} onClick={(event) => event.stopPropagation()} aria-label="Categories menu"><div className="drawer-top"><button className="drawer-close" onClick={closeMenu} aria-label="Close categories menu"><Icon name="close" /></button><span className="drawer-title">Categories</span><span className="drawer-top-spacer" /></div><div className="menu-featured" aria-label="Featured collections">{menuCards.map((card) => <Link key={card.label} to={card.path} onClick={closeMenu} aria-label={card.label}><div className="menu-featured__image"><CatalogImage src={card.image} alt="" sizes="160px" loading="eager" /></div></Link>)}</div><div className="menu-section-label">Scudo / Categories</div><nav className="category-nav" aria-label="Scudo categories">{menuCategories.map((item) => <Link key={item.label} to={item.path} onClick={closeMenu}><span><strong>{item.label}</strong><small>{item.note}</small></span><Icon name="arrow" size={18} /></Link>)}</nav><div className="drawer-secondary"><Link to="/shop/jerseys" onClick={closeMenu}>Jerseys</Link><Link to="/shop/t-shirts" onClick={closeMenu}>T-shirts</Link><Link to="/collections" onClick={closeMenu}>Collections</Link><Link to="/about" onClick={closeMenu}>About</Link></div><div className="drawer-account-links"><Link to={account ? '/orders' : '/account'} onClick={closeMenu}>{account ? 'Your orders' : 'Log in / Sign up'} <Icon name="arrow" size={15} /></Link><Link to="/wishlist" onClick={closeMenu}>Wishlist {wishlistCount > 0 && `(${wishlistCount})`} <Icon name="heart" size={15} /></Link>{account && <Link to="/settings" onClick={closeMenu}>Settings <Icon name="arrow" size={15} /></Link>}</div><div className="mobile-menu-footer"><Link to="/size-guide" onClick={closeMenu}>Size guide</Link><Link to="/shipping-final-sale" onClick={closeMenu}>Shipping & final sale</Link><Link to="/contact" onClick={closeMenu}>Contact</Link></div></aside></div>}
   </>
 }
 
@@ -416,30 +412,52 @@ function Breadcrumbs({ items }) { return <div className="breadcrumbs"><Link to="
 function SectionHeading({ eyebrow, title, copy, action }) { return <div className="section-heading"><div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2></div>{copy && <p>{copy}</p>}{action}</div> }
 
 function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
-  const featured = products.filter((p) => p.isFeatured)
   const campaignProducts = ['portugal-black-special', 'argentina-champions-home', 'france-away'].map((id) => products.find((product) => product.id === id)).filter(Boolean)
   const [heroIndex, setHeroIndex] = useState(0)
+  const [shopCarouselPage, setShopCarouselPage] = useState(0)
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
     const interval = window.setInterval(() => { if (!document.hidden) setHeroIndex((index) => (index + 1) % campaignProducts.length) }, 5600)
     return () => window.clearInterval(interval)
   }, [campaignProducts.length])
   const heroProduct = campaignProducts[heroIndex] || products[0]
-  const spotlightProducts = [...featured, ...products].filter((product, index, list) => list.findIndex((item) => item.id === product.id) === index).slice(0, 3)
-  const imageIndexProducts = products.map((product, index) => ({
-    product,
-    image: product.images[(index % (product.images.length - 1)) + 1]
-  }))
-  const catalogViewCount = products.reduce((total, product) => total + product.images.length, 0)
+  const shopCarouselPageCount = Math.ceil(products.length / 3)
+  const shopCarouselProducts = Array.from({ length: Math.min(3, products.length) }, (_, offset) => products[((shopCarouselPage * 3) + offset) % products.length])
   const tickerItems = ['Master version', 'Player version', 'Affordable kits', 'International shirts', 'Made for after full time']
   return <main className="home-page">
-    <section className="hero hero--campaign"><div className="hero-copy"><div className="hero-kicker"><span>SC / 26</span><i /><span>International edit</span></div><h1><span className="hero-line">Built for the</span><em className="hero-line">90 minutes.</em><span className="hero-line">Styled for</span><span className="hero-line">everything after.</span></h1><p>Eleven international shirts, curated through a Scudo lens for match days, city nights, and every moment between.</p><div className="button-row"><Link to="/shop/jerseys" className="button button-ghost hero-shop-button">Explore all shirts <Icon name="arrow" size={17} /></Link></div><div className="hero-proof" aria-label="Store highlights"><div><strong>11</strong><span>shirts in rotation</span></div><div><strong>03</strong><span>curated edits</span></div><div><strong>FINAL</strong><span>sale / no returns</span></div></div></div><div className="hero-visual"><div className="hero-ghost-word" aria-hidden="true">SCUDO</div><CatalogImage key={heroProduct.id} src={heroProduct.images[0]} alt={`${heroProduct.name} editorial product image`} sizes="(max-width: 740px) 100vw, 58vw" loading="eager" fetchPriority="high" /><div className="hero-stamp"><span>SC</span><span>{String(heroIndex + 1).padStart(2, '0')} / 03</span></div><button className="hero-next" type="button" onClick={() => setHeroIndex((current) => (current + 1) % campaignProducts.length)} aria-label="Show next campaign product"><Icon name="arrow" size={20} /></button><div className="hero-product-card"><span>{heroProduct.collection}</span><Link to={`/product/${heroProduct.slug}`}>{heroProduct.name}</Link><div><strong>{formatMoney(heroProduct.salePrice || heroProduct.price)}</strong><Link to={`/product/${heroProduct.slug}`} aria-label={`View ${heroProduct.name}`}><Icon name="arrow" size={17} /></Link></div></div><div className="hero-selector" aria-label="Campaign products">{campaignProducts.map((product, index) => <button key={product.id} className={heroIndex === index ? 'is-active' : ''} onClick={() => setHeroIndex(index)} aria-label={`Show ${product.name}`} aria-pressed={heroIndex === index}><span>{String(index + 1).padStart(2, '0')}</span><i /></button>)}</div><div className="hero-caption"><span>{heroProduct.name}</span><span>Scudo international edit / 2026</span></div></div></section>
+    <section className="hero hero--campaign">
+      <div className="hero-copy">
+        <h1 className="hero-armour-title" aria-label="Armour for everyday">
+          <span className="hero-line"><span>Armour</span></span>
+          <span className="hero-line"><span>For</span></span>
+          <span className="hero-line"><span>Everyday</span></span>
+        </h1>
+        <div className="button-row"><Link to="/shop/jerseys" className="button button-ghost hero-shop-button">Explore all shirts <Icon name="arrow" size={17} /></Link></div>
+        <div className="hero-proof" aria-label="Store highlights"><div><strong>11</strong><span>shirts in rotation</span></div><div><strong>03</strong><span>curated edits</span></div><div><strong>FINAL</strong><span>sale / no returns</span></div></div>
+      </div>
+      <div className="hero-visual">
+        <div className="hero-ghost-word" aria-hidden="true">SCUDO</div>
+        <CatalogImage key={heroProduct.id} src={heroProduct.images[0]} alt={`${heroProduct.name} editorial product image`} sizes="(max-width: 740px) 100vw, 58vw" loading="eager" fetchPriority="high" />
+        <div className="hero-stamp"><span>SC</span><span>{String(heroIndex + 1).padStart(2, '0')} / 03</span></div>
+        <button className="hero-next" type="button" onClick={() => setHeroIndex((current) => (current + 1) % campaignProducts.length)} aria-label="Show next campaign product"><Icon name="arrow" size={20} /></button>
+        <div className="hero-selector" aria-label="Campaign products">{campaignProducts.map((product, index) => <button key={product.id} className={heroIndex === index ? 'is-active' : ''} onClick={() => setHeroIndex(index)} aria-label={`Show ${product.name}`} aria-pressed={heroIndex === index}><span>{String(index + 1).padStart(2, '0')}</span><i /></button>)}</div>
+      </div>
+    </section>
     <section className="campaign-ticker" aria-label="Scudo clothing edits"><div className="campaign-ticker__track">{[0, 1].map((copy) => <div key={copy} aria-hidden={copy === 1}>{tickerItems.map((item) => <span key={`${copy}-${item}`}>{item}<i>✦</i></span>)}</div>)}</div></section>
-    <section className="section section-featured section-featured--campaign"><SectionHeading eyebrow="Captain's selection / 01" title="Three shirts. Three moods." copy="The pieces setting the tone for the new rotation." action={<Link to="/shop" className="text-link">Shop the full XI <Icon name="arrow" size={15} /></Link>} /><div className="campaign-product-grid"><div className="campaign-product-lead">{spotlightProducts[0] && <ProductCard product={spotlightProducts[0]} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />}</div><div className="campaign-product-side">{spotlightProducts.slice(1).map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></div></section>
+    <section className="section shop-carousel-section" aria-labelledby="shop-carousel-title">
+      <div className="shop-carousel-heading">
+        <div><span className="eyebrow">The full rotation</span><h2 id="shop-carousel-title">Shop all</h2></div>
+        <div className="shop-carousel-controls" aria-label="Browse shop products">
+          <span>{String(shopCarouselPage + 1).padStart(2, '0')} / {String(shopCarouselPageCount).padStart(2, '0')}</span>
+          <button type="button" onClick={() => setShopCarouselPage((page) => (page - 1 + shopCarouselPageCount) % shopCarouselPageCount)} aria-label="Show previous three products"><Icon name="back" size={20} /></button>
+          <button type="button" onClick={() => setShopCarouselPage((page) => (page + 1) % shopCarouselPageCount)} aria-label="Show next three products"><Icon name="arrow" size={20} /></button>
+        </div>
+      </div>
+      <div className="shop-carousel-grid" key={shopCarouselPage} aria-live="polite">{shopCarouselProducts.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div>
+    </section>
     <section className="editorial-image-section" aria-label="Armour for everyday campaign">
       <img src="/editorial/armour-for-everyday.png" alt="Scudo Armour for Everyday campaign featuring a black football shirt and the message More than a jersey, it is matchday culture" width="1844" height="576" loading="lazy" decoding="async" />
     </section>
-    <section className="section image-index-section"><div className="image-index-heading"><div><span className="eyebrow">The image archive / 2026</span><h2>Every shirt.<br /><em>Every angle.</em></h2></div><p><strong>{catalogViewCount}</strong> original photographs across the complete Scudo rotation. Select any frame to open its full product story.</p></div><div className="image-index-grid">{imageIndexProducts.map(({ product, image }, index) => <Link to={`/product/${product.slug}`} className="image-index-card" key={product.id}><CatalogImage src={image} alt={`${product.name} editorial view`} sizes="(max-width: 740px) 90vw, (max-width: 1100px) 50vw, 34vw" loading="lazy" /><span className="image-index-card__shade" /><span className="image-index-card__number">{String(index + 1).padStart(2, '0')}</span><span className="image-index-card__caption"><strong>{product.name}</strong><small>{product.collection}</small></span><span className="image-index-card__arrow"><Icon name="arrow" size={17} /></span></Link>)}</div><div className="image-index-footer"><span>11 shirts / {catalogViewCount} views</span><Link to="/shop" className="text-link">Explore the full rotation <Icon name="arrow" size={15} /></Link></div></section>
     <section className="section collection-section"><SectionHeading title="Collections" /><div className="collection-grid">{collections.map((collection) => <Link to={collection.path} className={`collection-card collection-card--${collection.tone}`} key={collection.title}><CatalogImage src={collection.image} alt={`${collection.title} collection`} sizes="(max-width: 740px) 80vw, 33vw" loading="lazy" /><div className="collection-overlay"><span className="eyebrow">{collection.eyebrow}</span><h3>{collection.title}</h3><span className="collection-copy">{collection.copy}</span><span className="circle-link circle-link--small"><Icon name="arrow" size={17} /></span></div></Link>)}</div></section>
     <section className="story-section"><div className="story-image"><CatalogImage src={products.find((product) => product.id === 'france-away')?.images[3]} alt="France away jersey editorial detail" sizes="(max-width: 740px) 100vw, 55vw" loading="lazy" /></div><div className="story-copy"><span className="eyebrow">The Scudo idea</span><h2>Not a kit.<br /><em>A point of view.</em></h2><p>Scudo Clothing brings the codes of football into the everyday — considered fabrics, easy silhouettes, and the confidence to wear your colours your way.</p><Link to="/about" className="text-link">Read our story <Icon name="arrow" size={15} /></Link><div className="story-aside"><span>01</span><span>Football culture,<br />translated for daily life.</span></div></div></section>
     <section className="benefits-section"><div className="benefit-intro"><span className="eyebrow">The fine print</span><h2>Good pieces<br /><em>make good days.</em></h2></div><div className="benefit-grid">{[['01', 'Quality-first pieces', 'Thoughtful materials, made to be worn often.'], ['02', 'Comfortable everyday fit', 'Relaxed proportions for movement beyond the pitch.'], ['03', 'Limited-release collections', 'Small runs, considered drops, no unnecessary noise.'], ['04', 'Final-sale policy', 'All purchases are final. Please confirm your size before ordering.']].map(([number, title, copy]) => <div className="benefit" key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></div>)}</div></section>
@@ -629,17 +647,33 @@ function AuthForm({ onSuccess, compact = false }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [status, setStatus] = useState('idle')
-  const submit = (event) => {
+  const submit = async (event) => {
     event.preventDefault()
-    if (status === 'submitting') return
+    if (status !== 'idle') return
     if (mode === 'signup' && !name.trim()) return setError('Please enter your name.')
-    if (!email.includes('@') || password.length < 4) return setError('Enter a valid email and a password of at least 4 characters.')
+    if (!email.includes('@') || password.length < 6) return setError('Enter a valid email and a password of at least 6 characters.')
     setError('')
-    setStatus('submitting')
-    window.setTimeout(() => onSuccess({ name: name.trim() || email.split('@')[0], email: email.trim().toLowerCase() }), 560)
+    setStatus('email')
+    try {
+      onSuccess(await authenticateWithEmail({ mode, name: name.trim(), email: email.trim().toLowerCase(), password }))
+    } catch (emailError) {
+      setError(firebaseAuthErrorMessage(emailError, 'email'))
+      setStatus('idle')
+    }
+  }
+  const googleSignIn = async () => {
+    if (status !== 'idle') return
+    setError('')
+    setStatus('google')
+    try {
+      onSuccess(await signInWithGoogle())
+    } catch (googleError) {
+      setError(firebaseAuthErrorMessage(googleError))
+      setStatus('idle')
+    }
   }
   const switchMode = () => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setStatus('idle') }
-  return <form className={`auth-form auth-form--${mode} ${compact ? 'auth-form--compact' : ''} ${error ? 'has-error' : ''} ${status === 'submitting' ? 'is-submitting' : ''}`} onSubmit={submit}>{mode === 'signup' && <Field label="Full name" value={name} onChange={setName} autoComplete="name" required />}<Field label="Email address" type="email" value={email} onChange={setEmail} autoComplete="email" required /><Field label="Password" type="password" value={password} onChange={setPassword} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />{error && <p className="form-error form-error--block">{error}</p>}<button className="button button-dark auth-submit" type="submit" disabled={status === 'submitting'}>{status === 'submitting' ? 'Checking...' : mode === 'login' ? 'Log in' : 'Create account'} <Icon name="arrow" size={16} /></button><button className="text-link account-toggle" type="button" onClick={switchMode} disabled={status === 'submitting'}>{mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Log in'}</button></form>
+  return <form className={`auth-form auth-form--${mode} ${compact ? 'auth-form--compact' : ''} ${error ? 'has-error' : ''} ${status !== 'idle' ? 'is-submitting' : ''}`} data-status={status} onSubmit={submit}><button className={`google-auth-button ${status === 'google' ? 'is-loading' : ''}`} type="button" onClick={googleSignIn} disabled={status !== 'idle'}><GoogleIcon /><span>{status === 'google' ? 'Connecting to Google...' : 'Continue with Google'}</span></button><div className="auth-divider"><span>or continue with email</span></div>{mode === 'signup' && <Field label="Full name" value={name} onChange={setName} autoComplete="name" required />}<Field label="Email address" type="email" value={email} onChange={setEmail} autoComplete="email" required /><Field label="Password" type="password" value={password} onChange={setPassword} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />{error && <p className="form-error form-error--block">{error}</p>}<button className="button button-dark auth-submit" type="submit" disabled={status !== 'idle'}>{status === 'email' ? 'Checking...' : mode === 'login' ? 'Log in' : 'Create account'} <Icon name="arrow" size={16} /></button><button className="text-link account-toggle" type="button" onClick={switchMode} disabled={status !== 'idle'}>{mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Log in'}</button></form>
 }
 
 function AuthGate({ onClose, onAuthenticated }) {
@@ -648,8 +682,8 @@ function AuthGate({ onClose, onAuthenticated }) {
 }
 
 function AccountPage({ account, onAuthenticate, onLogout }) {
-  if (account) return <main className="account-page"><div className="account-card account-card--signed-in"><ScudoLogo size="sm" /><span className="eyebrow">Your Scudo account</span><h1>Welcome back, {account.name}.</h1><p className="account-email">{account.email}</p><p className="demo-note">Your account gate is active for this demo store. Connect Supabase or Firebase to persist accounts securely.</p><button className="button button-ghost" onClick={onLogout}>Log out</button></div></main>
-  return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">Welcome back</span><h1>Log in to your account.</h1><AuthForm onSuccess={onAuthenticate} /><p className="demo-note">Demo account mode is active. Connect Supabase or Firebase before launch.</p></div></main>
+  if (account) return <main className="account-page"><div className="account-card account-card--signed-in"><ScudoLogo size="sm" /><span className="eyebrow">Your Scudo account</span><h1>Welcome back, {account.name}.</h1><p className="account-email">{account.email}</p><button className="button button-ghost" onClick={onLogout}>Log out</button></div></main>
+  return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">Welcome back</span><h1>Log in to your account.</h1><AuthForm onSuccess={onAuthenticate} /></div></main>
 }
 
 function OrdersPage({ account, order }) {
@@ -662,7 +696,7 @@ function SettingsPage({ account }) {
   const [name, setName] = useState(account?.name || '')
   const [email, setEmail] = useState(account?.email || '')
   if (!account) return <main className="account-page"><div className="account-card"><span className="eyebrow">Members first</span><h1>Log in to manage settings.</h1><Link to="/account" className="button button-dark">Log in <Icon name="arrow" size={16} /></Link></div></main>
-  return <main className="settings-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Settings' }]} /><div className="account-page-heading"><span className="eyebrow">Account preferences</span><h1>Settings.</h1><p>Keep your Scudo details current.</p></div><form className="settings-card" onSubmit={(event) => { event.preventDefault(); setSaved(true); window.setTimeout(() => setSaved(false), 1800) }}><label className="field"><span>Full name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label><label className="field"><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><div className="settings-card__footer"><span className="demo-note">Demo profile settings. Connect your auth provider before launch.</span><button className="button button-dark" type="submit">{saved ? 'Saved' : 'Save changes'} <Icon name={saved ? 'check' : 'arrow'} size={16} /></button></div></form></div></main>
+  return <main className="settings-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Settings' }]} /><div className="account-page-heading"><span className="eyebrow">Account preferences</span><h1>Settings.</h1><p>Keep your Scudo details current.</p></div><form className="settings-card" onSubmit={(event) => { event.preventDefault(); setSaved(true); window.setTimeout(() => setSaved(false), 1800) }}><label className="field"><span>Full name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label><label className="field"><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><div className="settings-card__footer"><button className="button button-dark" type="submit">{saved ? 'Saved' : 'Save changes'} <Icon name={saved ? 'check' : 'arrow'} size={16} /></button></div></form></div></main>
 }
 
 function AdminPage() { const [authed, setAuthed] = usePersistedState('scudo-admin-auth', false); const [announcement, setAnnouncement] = usePersistedState('scudo-announcement', 'DROP 01 — THE FIRST XI'); const [saved, setSaved] = useState(false); if (!authed) return <main className="account-page"><div className="account-card"><span className="eyebrow">Store admin</span><h1>Keep the team sheet current.</h1><p>Protected demo foundation for catalog, inventory, content, and order operations.</p><button className="button button-dark" onClick={() => setAuthed(true)}>Enter demo dashboard <Icon name="arrow" size={16} /></button><p className="demo-note">Demo access only. Replace this gate with your auth provider before launch.</p></div></main>; return <main className="admin-page"><div className="page-shell"><div className="admin-header"><div><span className="eyebrow">Scudo / Store admin</span><h1>Good morning, manager.</h1></div><button className="button button-ghost" onClick={() => setAuthed(false)}>Log out</button></div><div className="admin-stats">{[['Live products', products.filter((p) => !p.isSoldOut).length, 'catalog'], ['Inventory value', formatMoney(products.reduce((sum, p) => sum + p.price * p.inventory, 0)), 'at retail'], ['Low stock', products.filter((p) => p.inventory > 0 && p.inventory < 8).length, 'needs a look'], ['Payment gateway', 'Razorpay', 'server verified']].map(([label, value, note]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div><div className="admin-grid"><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Content</span><h2>Announcement bar</h2></div><span className="status-pill">Live</span></div><p>Edit the message shown above the storefront header.</p><div className="admin-edit-row"><input value={announcement} onChange={(e) => { setAnnouncement(e.target.value); setSaved(false) }} /><button className="button button-dark" onClick={() => setSaved(true)}>Save</button></div>{saved && <span className="form-success">Saved to demo store.</span>}</section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Catalog</span><h2>Products</h2></div><Link to="/shop" className="text-link">View storefront <Icon name="arrow" size={14} /></Link></div><div className="admin-products">{products.map((product) => <div key={product.id}><img src={product.images[0]} alt="" /><span>{product.name}<small>{product.sku}</small></span><strong className={product.inventory < 8 ? 'low-stock' : ''}>{product.isSoldOut ? 'Sold out' : `${product.inventory} in stock`}</strong><button className="icon-button" aria-label={`Edit ${product.name}`}><Icon name="chevron" size={15} /></button></div>)}</div></section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Operations</span><h2>Next connections</h2></div></div><div className="admin-checklist">{['Product image storage', 'Razorpay secure payments', 'Supabase authentication', 'Payment capture webhooks'].map((item, i) => <div key={item}><span className={i !== 2 ? 'check is-done' : 'check'}>{i !== 2 && <Icon name="check" size={13} />}</span>{item}<span className="connection-status">{i === 2 ? 'Not configured' : i === 0 ? 'Ready for upload' : 'Configured in code'}</span></div>)}</div></section></div></div></main> }
@@ -681,11 +715,13 @@ export default function App() {
   const [authPrompt, setAuthPrompt] = useState(false)
   const [pendingAdd, setPendingAdd] = useState(null)
   const [order, setOrder] = usePersistedState('scudo-last-order', null)
+  useEffect(() => watchFirebaseAuth(setAccount), [setAccount])
   useEffect(() => { document.title = path === '/' ? 'Scudo Clothing — Football-inspired streetwear' : `${path.replace('/', '').replaceAll('/', ' / ')} — Scudo Clothing` }, [route, path])
   const toggleWishlist = (id) => setWishlist((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
   const addToCartNow = (product, size, color, quantity = 1) => { const key = `${product.id}-${size}-${color}`; setCart((current) => { const existing = current.find((item) => item.key === key); return existing ? current.map((item) => item.key === key ? { ...item, quantity: item.quantity + quantity } : item) : [...current, { key, product, size, color, quantity }] }); setCartOpen(true); return 'added' }
   const addToCart = (product, size, color, quantity = 1) => { if (!account) { setPendingAdd({ product, size, color, quantity }); setAuthPrompt(true); return 'auth-required' }; return addToCartNow(product, size, color, quantity) }
   const authenticate = (profile) => { setAccount(profile); setAuthPrompt(false); if (pendingAdd) { addToCartNow(pendingAdd.product, pendingAdd.size, pendingAdd.color, pendingAdd.quantity); setPendingAdd(null) } }
+  const logout = async () => { await signOutFirebase(); setAccount(null) }
   const closeAuthPrompt = () => { setAuthPrompt(false); setPendingAdd(null) }
   const updateQuantity = (key, quantity) => setCart((current) => quantity < 1 ? current.filter((item) => item.key !== key) : current.map((item) => item.key === key ? { ...item, quantity } : item))
   const removeCartItem = (key) => setCart((current) => current.filter((item) => item.key !== key))
@@ -709,7 +745,7 @@ export default function App() {
   else if (path === '/cart') content = <CartPage cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => navigate('/checkout')} />
   else if (path === '/checkout') content = <CheckoutPage cart={cart} onPlaceOrder={placeOrder} />
   else if (path === '/order-confirmation') content = <OrderConfirmation order={order} />
-  else if (path === '/account') content = <AccountPage account={account} onAuthenticate={authenticate} onLogout={() => setAccount(null)} />
+  else if (path === '/account') content = <AccountPage account={account} onAuthenticate={authenticate} onLogout={logout} />
   else if (path === '/orders') content = <OrdersPage account={account} order={order} />
   else if (path === '/settings') content = <SettingsPage account={account} />
   else if (path === '/admin') content = <AdminPage />
