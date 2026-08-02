@@ -1,5 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { products } from './productCatalog.js'
+import { payWithRazorpay } from './razorpay.js'
 
 const catalogImages = (slug, count) => Array.from({ length: count }, (_, index) => `/catalog/${slug}/${String(index + 1).padStart(2, '0')}.webp`)
 const catalogVariant = (src, width) => src.replace(/\.webp$/, `-${width}.webp`)
@@ -15,106 +17,6 @@ function CatalogImage({ src, sizes = '100vw', ...props }) {
   />
 }
 
-const jerseyDefaults = {
-  category: 'Jerseys',
-  currency: 'INR',
-  brand: 'Scudo Clothing',
-  sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-  material: 'Breathable performance polyester',
-  careInstructions: 'Cold wash inside out. Air dry in shade.',
-  isSoldOut: false
-}
-
-export const products = [
-  {
-    ...jerseyDefaults,
-    id: 'argentina-champions-home', name: 'Argentina Champions Home Jersey', slug: 'argentina-champions-home-jersey',
-    description: 'The iconic sky-blue and white home shirt, finished with the champions badge and gold crest details.',
-    shortDescription: 'Champions-edition Argentina home jersey.', collection: 'Master Version', edits: ['new-arrivals', 'master-version'],
-    price: 2799, salePrice: null, sku: 'SC-ARG-M01', colors: ['Sky blue', 'White'], inventory: 17,
-    images: catalogImages('argentina-champions-home', 6), isNew: true, isFeatured: false
-  },
-  {
-    ...jerseyDefaults,
-    id: 'brazil-home', name: 'Brazil 2024/25 Home Jersey', slug: 'brazil-2024-25-home-jersey',
-    description: 'A vivid yellow Brazil home shirt with green trim, a clean V-neck construction, and a lightweight match-ready feel.',
-    shortDescription: 'Brazil yellow home jersey with green trim.', collection: 'Master Version', edits: ['bestsellers', 'master-version'],
-    price: 2499, salePrice: null, sku: 'SC-BRA-M02', colors: ['Yellow', 'Green'], inventory: 24,
-    images: catalogImages('brazil-home', 7), isNew: false, isFeatured: true
-  },
-  {
-    ...jerseyDefaults,
-    id: 'brazil-blue-away', name: 'Brazil Blue Away Football Kit', slug: 'brazil-blue-away-football-kit',
-    description: 'A deep navy Brazil away shirt with electric blue movement, gold details, and a bold modern graphic.',
-    shortDescription: 'Brazil navy away kit with electric blue pattern.', collection: 'Master Version', edits: ['master-version', 'affordable-kits'],
-    price: 1799, salePrice: 1499, sku: 'SC-BRA-A03', colors: ['Navy', 'Royal blue'], inventory: 21,
-    images: catalogImages('brazil-blue-away', 7), isNew: false, isFeatured: false
-  },
-  {
-    ...jerseyDefaults,
-    id: 'barcelona-player-home', name: 'FC Barcelona Home Player Jersey', slug: 'fc-barcelona-home-player-jersey',
-    description: 'A player-cut Barcelona home shirt with engineered red and navy graphics and a close, athletic silhouette.',
-    shortDescription: 'Barcelona home jersey in player construction.', collection: 'Master Version', edits: ['new-arrivals', 'master-version'],
-    price: 2899, salePrice: null, sku: 'SC-FCB-M04', colors: ['Navy', 'Crimson'], inventory: 13,
-    images: catalogImages('barcelona-player-home', 6), material: 'Engineered performance mesh', isNew: true, isFeatured: false
-  },
-  {
-    ...jerseyDefaults,
-    id: 'france-away', name: 'France 2024 Away Jersey', slug: 'france-2024-away-jersey',
-    description: 'A pale mint France away jersey with orange crest accents and a quiet, fashion-forward colour story.',
-    shortDescription: 'France away jersey in pale mint.', collection: 'Master Version', edits: ['new-arrivals', 'master-version'],
-    price: 2599, salePrice: null, sku: 'SC-FRA-A05', colors: ['Mint', 'White'], inventory: 16,
-    images: catalogImages('france-away', 5), isNew: true, isFeatured: false
-  },
-  {
-    ...jerseyDefaults,
-    id: 'france-home', name: 'France 2024/25 Home Jersey', slug: 'france-2024-25-home-jersey',
-    description: 'A deep blue France home jersey with a crisp white collar, gold marks, and tonal diagonal texture.',
-    shortDescription: 'France blue home jersey with white collar.', collection: 'Master Version', edits: ['bestsellers', 'master-version'],
-    price: 2499, salePrice: null, sku: 'SC-FRA-H06', colors: ['Blue', 'White'], inventory: 20,
-    images: catalogImages('france-home', 7), isNew: false, isFeatured: true
-  },
-  {
-    ...jerseyDefaults,
-    id: 'portugal-away', name: 'Portugal 2026 Away Player Jersey', slug: 'portugal-2026-away-player-jersey',
-    description: 'A fresh mint-and-white Portugal away shirt with expressive brushwork and an athletic player-version fit.',
-    shortDescription: 'Portugal mint away jersey in player fit.', collection: 'Player Version', edits: ['bestsellers', 'player-version'],
-    price: 2899, salePrice: null, sku: 'SC-POR-A07', colors: ['Mint', 'White'], inventory: 12,
-    images: catalogImages('portugal-away', 5), material: 'Ultra-light performance mesh', isNew: false, isFeatured: true
-  },
-  {
-    ...jerseyDefaults,
-    id: 'portugal-black-special', name: 'Portugal Black Special Edition Jersey', slug: 'portugal-black-special-edition-jersey',
-    description: 'A black-on-black Portugal special edition finished with antique gold marks and precise red-green trim.',
-    shortDescription: 'Portugal black anniversary special edition.', collection: 'Master Version', edits: ['master-version'],
-    price: 2699, salePrice: null, sku: 'SC-POR-B08', colors: ['Black', 'Gold'], inventory: 9,
-    images: catalogImages('portugal-black-special', 6), material: 'Jacquard performance polyester', isNew: false, isFeatured: true
-  },
-  {
-    ...jerseyDefaults,
-    id: 'portugal-home-kit', name: 'Portugal Home Jersey Kit', slug: 'portugal-home-jersey-kit',
-    description: 'A confident red Portugal home shirt with green edging and subtle tonal waves across the body.',
-    shortDescription: 'Portugal red home kit with green trim.', collection: 'Master Version', edits: ['master-version', 'affordable-kits'],
-    price: 1699, salePrice: 1399, sku: 'SC-POR-H09', colors: ['Red', 'Green'], inventory: 27,
-    images: catalogImages('portugal-home-kit', 6), isNew: false, isFeatured: false
-  },
-  {
-    ...jerseyDefaults,
-    id: 'real-madrid-home', name: 'Real Madrid 2024/25 Home Player Jersey', slug: 'real-madrid-2024-25-home-player-jersey',
-    description: 'A clean white Real Madrid home shirt with deep green trim and a streamlined player-version construction.',
-    shortDescription: 'Real Madrid white home jersey in player fit.', collection: 'Player Version', edits: ['player-version'],
-    price: 2999, salePrice: null, sku: 'SC-RMA-H10', colors: ['White', 'Deep green'], inventory: 14,
-    images: catalogImages('real-madrid-home', 5), material: 'Authentic performance knit', isNew: false, isFeatured: false
-  },
-  {
-    ...jerseyDefaults,
-    id: 'spain-home', name: 'Spain 2024/25 Home Player Jersey', slug: 'spain-2024-25-home-player-jersey',
-    description: 'A saturated red Spain home shirt with navy sleeves, gold pinstripes, and a lightweight athletic shape.',
-    shortDescription: 'Spain red home jersey with navy sleeves.', collection: 'Player Version', edits: ['player-version'],
-    price: 2699, salePrice: null, sku: 'SC-ESP-H11', colors: ['Red', 'Navy'], inventory: 18,
-    images: catalogImages('spain-home', 5), material: 'Lightweight performance mesh', isNew: false, isFeatured: false
-  }
-]
 
 const collections = [
   { title: 'Master Version', eyebrow: '01 / Matchday standard', copy: 'Detailed builds for the full ninety.', image: catalogImages('brazil-home', 4)[3], path: '/shop?edit=master-version', tone: 'ink' },
@@ -340,7 +242,7 @@ function useMotionSystem(route) {
   useEffect(() => {
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     const root = document.documentElement
-    const motionSelector = '.hero-copy, .hero-visual, .campaign-ticker, .section-heading, .campaign-product-lead, .campaign-product-side, .product-card, .image-index-card, .editorial-band > *, .collection-card, .story-image, .story-copy, .benefit, .shop-heading, .shop-toolbar, .shop-results, .product-gallery, .gallery-tile, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
+    const motionSelector = '.hero-copy, .hero-visual, .campaign-ticker, .section-heading, .campaign-product-lead, .campaign-product-side, .product-card, .image-index-card, .editorial-image-section, .collection-card, .story-image, .story-copy, .benefit, .shop-heading, .shop-toolbar, .shop-results, .product-gallery, .gallery-tile, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
     const updateScrollState = () => {
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight
       const progress = maxScroll > 0 ? Math.min(1, window.scrollY / maxScroll) : 0
@@ -527,7 +429,9 @@ function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
     <section className="hero hero--campaign"><div className="hero-copy"><div className="hero-kicker"><span>SC / 26</span><i /><span>International edit</span></div><h1><span className="hero-line">Built for the</span><em className="hero-line">90 minutes.</em><span className="hero-line">Styled for</span><span className="hero-line">everything after.</span></h1><p>Eleven international shirts, curated through a Scudo lens for match days, city nights, and every moment between.</p><div className="button-row"><Link to="/shop/jerseys" className="button button-ghost hero-shop-button">Explore all shirts <Icon name="arrow" size={17} /></Link></div><div className="hero-proof" aria-label="Store highlights"><div><strong>11</strong><span>shirts in rotation</span></div><div><strong>03</strong><span>curated edits</span></div><div><strong>FINAL</strong><span>sale / no returns</span></div></div></div><div className="hero-visual"><div className="hero-ghost-word" aria-hidden="true">SCUDO</div><CatalogImage key={heroProduct.id} src={heroProduct.images[0]} alt={`${heroProduct.name} editorial product image`} sizes="(max-width: 740px) 100vw, 58vw" loading="eager" fetchPriority="high" /><div className="hero-stamp"><span>SC</span><span>{String(heroIndex + 1).padStart(2, '0')} / 03</span></div><div className="hero-product-card"><span>{heroProduct.collection}</span><Link to={`/product/${heroProduct.slug}`}>{heroProduct.name}</Link><div><strong>{formatMoney(heroProduct.salePrice || heroProduct.price)}</strong><Link to={`/product/${heroProduct.slug}`} aria-label={`View ${heroProduct.name}`}><Icon name="arrow" size={17} /></Link></div></div><div className="hero-selector" aria-label="Campaign products">{campaignProducts.map((product, index) => <button key={product.id} className={heroIndex === index ? 'is-active' : ''} onClick={() => setHeroIndex(index)} aria-label={`Show ${product.name}`} aria-pressed={heroIndex === index}><span>{String(index + 1).padStart(2, '0')}</span><i /></button>)}</div><div className="hero-caption"><span>{heroProduct.name}</span><span>Scudo international edit / 2026</span></div></div></section>
     <section className="campaign-ticker" aria-label="Scudo clothing edits"><div className="campaign-ticker__track">{[0, 1].map((copy) => <div key={copy} aria-hidden={copy === 1}>{tickerItems.map((item) => <span key={`${copy}-${item}`}>{item}<i>✦</i></span>)}</div>)}</div></section>
     <section className="section section-featured section-featured--campaign"><SectionHeading eyebrow="Captain's selection / 01" title="Three shirts. Three moods." copy="The pieces setting the tone for the new rotation." action={<Link to="/shop" className="text-link">Shop the full XI <Icon name="arrow" size={15} /></Link>} /><div className="campaign-product-grid"><div className="campaign-product-lead">{spotlightProducts[0] && <ProductCard product={spotlightProducts[0]} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />}</div><div className="campaign-product-side">{spotlightProducts.slice(1).map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></div></section>
-    <section className="editorial-band"><span className="editorial-band__mark" aria-hidden="true">90+</span><div><span className="eyebrow">A note from the touchline</span><h2>Everyday uniform,<br /><em>matchday energy.</em></h2></div><p>Scudo is a study in the pieces around the game — the warm-up, the walk home, the long conversations after full time.</p><Link to="/about" className="circle-link" aria-label="Read the Scudo story"><Icon name="arrow" size={22} /></Link></section>
+    <section className="editorial-image-section" aria-label="Armour for everyday campaign">
+      <img src="/editorial/armour-for-everyday.png" alt="Scudo Armour for Everyday campaign featuring a black football shirt and the message More than a jersey, it is matchday culture" width="1844" height="576" loading="lazy" decoding="async" />
+    </section>
     <section className="section image-index-section"><div className="image-index-heading"><div><span className="eyebrow">The image archive / 2026</span><h2>Every shirt.<br /><em>Every angle.</em></h2></div><p><strong>{catalogViewCount}</strong> original photographs across the complete Scudo rotation. Select any frame to open its full product story.</p></div><div className="image-index-grid">{imageIndexProducts.map(({ product, image }, index) => <Link to={`/product/${product.slug}`} className="image-index-card" key={product.id}><CatalogImage src={image} alt={`${product.name} editorial view`} sizes="(max-width: 740px) 90vw, (max-width: 1100px) 50vw, 34vw" loading="lazy" /><span className="image-index-card__shade" /><span className="image-index-card__number">{String(index + 1).padStart(2, '0')}</span><span className="image-index-card__caption"><strong>{product.name}</strong><small>{product.collection}</small></span><span className="image-index-card__arrow"><Icon name="arrow" size={17} /></span></Link>)}</div><div className="image-index-footer"><span>11 shirts / {catalogViewCount} views</span><Link to="/shop" className="text-link">Explore the full rotation <Icon name="arrow" size={15} /></Link></div></section>
     <section className="section collection-section"><SectionHeading title="Collections" /><div className="collection-grid">{collections.map((collection) => <Link to={collection.path} className={`collection-card collection-card--${collection.tone}`} key={collection.title}><CatalogImage src={collection.image} alt={`${collection.title} collection`} sizes="(max-width: 740px) 80vw, 33vw" loading="lazy" /><div className="collection-overlay"><span className="eyebrow">{collection.eyebrow}</span><h3>{collection.title}</h3><span className="collection-copy">{collection.copy}</span><span className="circle-link circle-link--small"><Icon name="arrow" size={17} /></span></div></Link>)}</div></section>
     <section className="story-section"><div className="story-image"><CatalogImage src={products.find((product) => product.id === 'france-away')?.images[3]} alt="France away jersey editorial detail" sizes="(max-width: 740px) 100vw, 55vw" loading="lazy" /></div><div className="story-copy"><span className="eyebrow">The Scudo idea</span><h2>Not a kit.<br /><em>A point of view.</em></h2><p>Scudo Clothing brings the codes of football into the everyday — considered fabrics, easy silhouettes, and the confidence to wear your colours your way.</p><Link to="/about" className="text-link">Read our story <Icon name="arrow" size={15} /></Link><div className="story-aside"><span>01</span><span>Football culture,<br />translated for daily life.</span></div></div></section>
@@ -634,27 +538,50 @@ function CartPage({ cart, onUpdateQuantity, onRemove, onCheckout }) {
   return <main className="cart-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Shopping bag' }]} /><div className="cart-heading"><div><span className="eyebrow">Review your rotation</span><h1>Shopping bag</h1></div>{cart.length > 0 && <span>{cart.reduce((a, i) => a + i.quantity, 0)} pieces</span>}</div>{cart.length ? <div className="cart-layout"><div className="cart-items">{cart.map((item) => <CartLine key={item.key} item={item} onUpdateQuantity={onUpdateQuantity} onRemove={onRemove} />)}<Link to="/shop" className="text-link back-link"><Icon name="back" size={15} /> Continue shopping</Link></div><OrderSummary subtotal={subtotal} shipping={shipping} tax={tax} onCheckout={onCheckout} /></div> : <EmptyState title="No pieces yet" copy="Your bag is waiting for its first addition." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} />}</div></main>
 }
 
-function OrderSummary({ subtotal, shipping, tax, onCheckout, checkoutLabel = 'Checkout' }) { return <aside className="order-summary"><span className="eyebrow">Summary</span><h2>Matchday total</h2><div className="summary-lines"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><div><span>Shipping</span><strong>{shipping ? formatMoney(shipping) : 'Complimentary'}</strong></div><div><span>Estimated tax</span><strong>{formatMoney(tax)}</strong></div></div><div className="summary-total"><span>Total</span><strong>{formatMoney(subtotal + shipping + tax)}</strong></div><button className="button button-dark" onClick={onCheckout} disabled={!subtotal}>{checkoutLabel} <Icon name="arrow" size={16} /></button><p className="secure-note">All sales final · no returns. Demo checkout mode · no payment is processed.</p></aside> }
+function OrderSummary({ subtotal, shipping, tax, onCheckout, checkoutLabel = 'Checkout', disabled = false }) { return <aside className="order-summary"><span className="eyebrow">Summary</span><h2>Matchday total</h2><div className="summary-lines"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><div><span>Shipping</span><strong>{shipping ? formatMoney(shipping) : 'Complimentary'}</strong></div><div><span>Estimated tax</span><strong>{formatMoney(tax)}</strong></div></div><div className="summary-total"><span>Total</span><strong>{formatMoney(subtotal + shipping + tax)}</strong></div><button className="button button-dark" type="button" onClick={onCheckout} disabled={!subtotal || disabled}>{checkoutLabel} <Icon name="arrow" size={16} /></button><p className="secure-note">Totals are verified on our server · payments secured by Razorpay · all sales final.</p></aside> }
 
 function CheckoutPage({ cart, onPlaceOrder }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '', country: 'India', postal: '', payment: 'upi', terms: false })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '', country: 'India', postal: '', terms: false })
   const [error, setError] = useState('')
-  const [placing, setPlacing] = useState(false)
+  const [stage, setStage] = useState('idle')
+  const paymentLock = useRef(false)
+  const placing = stage !== 'idle'
   const subtotal = cart.reduce((total, item) => total + (item.product.salePrice || item.product.price) * item.quantity, 0)
   const shipping = subtotal >= 3500 || subtotal === 0 ? 0 : 150
   const tax = Math.round(subtotal * 0.05)
-  const total = subtotal + shipping + tax
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   useEffect(() => { const button = document.querySelector('.place-order'); if (button) button.dataset.status = placing ? 'processing' : 'idle' }, [placing])
-  const validateAndPlace = () => { if (placing) return; if (!form.terms) return setError('Please accept the terms and privacy policy to continue.'); if (!form.name || !form.email || !form.address || !form.city || !form.postal) return setError('Please complete the required delivery details.'); setError(''); setPlacing(true); window.setTimeout(() => onPlaceOrder({ ...form, total, items: cart }), 700) }
+  const buttonLabel = stage === 'creating' ? 'Creating secure order…' : stage === 'awaiting' ? 'Complete payment in Razorpay…' : stage === 'verifying' ? 'Verifying payment…' : 'Pay securely with Razorpay'
+  const validateAndPlace = async () => {
+    if (paymentLock.current || placing) return
+    if (!form.terms) return setError('Please accept the terms, final-sale policy, and privacy policy to continue.')
+    if (!form.name || !form.email || !form.phone || !form.address || !form.city || !form.state || !form.postal) return setError('Please complete all required delivery details.')
+    setError('')
+    paymentLock.current = true
+    try {
+      const verification = await payWithRazorpay({ cart, customer: form, termsAccepted: form.terms, onStage: setStage })
+      onPlaceOrder({
+        number: verification.order.receipt,
+        city: form.city,
+        country: form.country,
+        total: verification.order.amount / 100,
+        items: cart,
+        payment: { provider: 'Razorpay', orderId: verification.order.orderId, paymentId: verification.order.paymentId, status: verification.paid ? 'Paid' : 'Processing' }
+      })
+    } catch (paymentError) {
+      paymentLock.current = false
+      setError(paymentError?.message || 'Secure payment could not be completed. Please try again.')
+      setStage('idle')
+    }
+  }
   const submit = (event) => { event.preventDefault(); validateAndPlace() }
-  return <main className="checkout-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Checkout' }]} /><div className="checkout-heading"><span className="eyebrow">Secure demo checkout</span><h1>Ready when you are.</h1><p>Your order is reserved in demo mode. Connect Razorpay or Stripe through the environment variables before accepting live payments.</p></div>{!cart.length ? <EmptyState title="Your bag is empty" copy="Add something before checking out." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} /> : <form className="checkout-layout" onSubmit={submit}><div className="checkout-form"><FormSection title="Contact"><div className="form-grid"><Field label="Full name" value={form.name} onChange={(v) => update('name', v)} required /><Field label="Email address" type="email" value={form.email} onChange={(v) => update('email', v)} required /><Field label="Phone number" value={form.phone} onChange={(v) => update('phone', v)} /></div></FormSection><FormSection title="Delivery address"><div className="form-grid"><Field label="Address" value={form.address} onChange={(v) => update('address', v)} required wide /><Field label="City" value={form.city} onChange={(v) => update('city', v)} required /><Field label="State" value={form.state} onChange={(v) => update('state', v)} /><Field label="Country" value={form.country} onChange={(v) => update('country', v)} /><Field label="Postal code" value={form.postal} onChange={(v) => update('postal', v)} required /></div></FormSection><FormSection title="Payment"><div className="payment-note"><span className="demo-badge">DEMO MODE</span><p>Payment credentials are not configured. This order will be marked as awaiting payment and will not charge a card.</p></div><div className="payment-options">{[['upi', 'UPI'], ['card', 'Credit / debit card'], ['netbanking', 'Net banking'], ['cod', 'Cash on delivery']].map(([value, label]) => <label key={value} className={`payment-option ${form.payment === value ? 'is-selected' : ''}`}><input type="radio" name="payment" checked={form.payment === value} onChange={() => update('payment', value)} /><span>{label}</span></label>)}</div></FormSection><label className="checkbox-row"><input type="checkbox" checked={form.terms} onChange={(e) => update('terms', e.target.checked)} /><span>I agree to the <Link to="/terms">terms and final-sale policy</Link> and <Link to="/privacy">privacy policy</Link>.</span></label>{error && <p className="form-error form-error--block">{error}</p>}<button className="button button-dark place-order" type="submit">Place demo order <Icon name="arrow" size={16} /></button></div><OrderSummary subtotal={subtotal} shipping={shipping} tax={tax} checkoutLabel="Place order" onCheckout={validateAndPlace} /></form>}</div></main>
+  return <main className="checkout-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Checkout' }]} /><div className="checkout-heading"><span className="eyebrow">Secure Razorpay checkout</span><h1>Ready when you are.</h1><p>Your total is recalculated on our server before Razorpay opens. Scudo never receives or stores your card, UPI PIN, or banking credentials.</p></div>{!cart.length ? <EmptyState title="Your bag is empty" copy="Add something before checking out." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} /> : <form className="checkout-layout" onSubmit={submit}><div className="checkout-form"><FormSection title="Contact"><div className="form-grid"><Field label="Full name" value={form.name} onChange={(v) => update('name', v)} required autoComplete="name" /><Field label="Email address" type="email" value={form.email} onChange={(v) => update('email', v)} required autoComplete="email" /><Field label="Phone number" type="tel" value={form.phone} onChange={(v) => update('phone', v)} required autoComplete="tel" /></div></FormSection><FormSection title="Delivery address"><div className="form-grid"><Field label="Address" value={form.address} onChange={(v) => update('address', v)} required wide autoComplete="street-address" /><Field label="City" value={form.city} onChange={(v) => update('city', v)} required autoComplete="address-level2" /><Field label="State" value={form.state} onChange={(v) => update('state', v)} required autoComplete="address-level1" /><Field label="Country" value={form.country} onChange={(v) => update('country', v)} required autoComplete="country-name" /><Field label="Postal code" value={form.postal} onChange={(v) => update('postal', v)} required autoComplete="postal-code" /></div></FormSection><FormSection title="Payment"><div className="payment-note payment-note--secure"><span className="payment-badge">RAZORPAY</span><p><strong>Choose UPI, card, wallet, or net banking securely in Razorpay Checkout.</strong><br />Payment is accepted only after server-side signature and captured-status verification.</p></div></FormSection><label className="checkbox-row"><input type="checkbox" checked={form.terms} onChange={(e) => update('terms', e.target.checked)} /><span>I agree to the <Link to="/terms">terms and final-sale policy</Link> and <Link to="/privacy">privacy policy</Link>.</span></label>{error && <p className="form-error form-error--block" role="alert">{error}</p>}<button className="button button-dark place-order" type="submit" disabled={placing} aria-busy={placing}>{buttonLabel} <Icon name="arrow" size={16} /></button></div><OrderSummary subtotal={subtotal} shipping={shipping} tax={tax} checkoutLabel={buttonLabel} onCheckout={validateAndPlace} disabled={placing} /></form>}</div></main>
 }
 
 function FormSection({ title, children }) { return <section className="form-section"><h2>{title}</h2>{children}</section> }
 function Field({ label, type = 'text', value, onChange, required, wide, autoComplete }) { return <label className={`field ${wide ? 'field--wide' : ''}`}><span>{label}{required && ' *'}</span><input type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} autoComplete={autoComplete} /></label> }
 
-function OrderConfirmation({ order }) { return <main className="confirmation-page"><div className="confirmation-card"><div className="confirmation-mark"><Icon name="check" size={26} /></div><span className="eyebrow">Order received / {order?.number || 'SC-DEMO'}</span><h1>See you on the other side.</h1><p>Your demo order is safely captured. All purchases are final and no returns are accepted. No payment has been processed; connect a provider before launch.</p><div className="confirmation-meta"><div><span>Payment status</span><strong>Awaiting payment</strong></div><div><span>Estimated delivery</span><strong>2–4 business days</strong></div><div><span>Ship to</span><strong>{order?.city || 'Your city'}, {order?.country || 'India'}</strong></div></div><Link to="/shop" className="button button-dark">Continue shopping <Icon name="arrow" size={16} /></Link></div></main> }
+function OrderConfirmation({ order }) { const paid = order?.payment?.status === 'Paid'; const processing = order?.payment?.status === 'Processing'; return <main className="confirmation-page"><div className="confirmation-card"><div className="confirmation-mark"><Icon name={paid ? 'check' : 'chevron'} size={26} /></div><span className="eyebrow">Order received / {order?.number || 'SC-PENDING'}</span><h1>{paid ? 'Payment confirmed.' : 'Payment received.'}</h1><p>{paid ? 'Razorpay verified and captured your payment securely.' : processing ? 'Your payment signature is verified and Razorpay is completing capture. Do not submit another payment for this order.' : 'Your order is being reviewed.'} All purchases are final and no returns are accepted.</p><div className="confirmation-meta"><div><span>Payment status</span><strong>{order?.payment?.status || 'Processing'}</strong></div><div><span>Estimated delivery</span><strong>2–4 business days after capture</strong></div><div><span>Ship to</span><strong>{order?.city || 'Your city'}, {order?.country || 'India'}</strong></div></div><Link to="/shop" className="button button-dark">Continue shopping <Icon name="arrow" size={16} /></Link></div></main> }
 
 function WishlistPage({ wishlist, onToggleWishlist, onQuickAdd }) { const wished = products.filter((product) => wishlist.includes(product.id)); return <main className="shop-page wishlist-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Wishlist' }]} /><div className="shop-heading"><div><span className="eyebrow">Saved for later</span><h1>Your wishlist</h1></div><p>{wished.length ? `${wished.length} pieces saved.` : 'Keep the good ones close.'}</p></div>{wished.length ? <div className="product-grid product-grid--four">{wished.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Your list is quiet" copy="Tap the heart on a piece to save it for later." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} />}</div></main> }
 
@@ -719,7 +646,7 @@ function AccountPage({ account, onAuthenticate, onLogout }) {
 
 function OrdersPage({ account, order }) {
   if (!account) return <main className="account-page"><div className="account-card"><span className="eyebrow">Members first</span><h1>Log in to see your orders.</h1><p className="demo-note">Your order history will appear here after you sign in.</p><Link to="/account" className="button button-dark">Log in <Icon name="arrow" size={16} /></Link></div></main>
-  return <main className="orders-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Your orders' }]} /><div className="account-page-heading"><span className="eyebrow">Your rotation</span><h1>Orders.</h1><p>Every piece you’ve added to the journey.</p></div>{order ? <article className="order-card"><div className="order-card__head"><div><span className="eyebrow">Order {order.number}</span><h2>Captured in demo mode.</h2></div><span className="status-pill">Awaiting payment</span></div><div className="order-card__meta"><div><span>Date</span><strong>{new Date(Number(order.number?.replace('SC-', '')) || Date.now()).toLocaleDateString('en-IN')}</strong></div><div><span>Ship to</span><strong>{order.city || 'Your city'}, {order.country || 'India'}</strong></div><div><span>Total</span><strong>{formatMoney(order.total || 0)}</strong></div></div><div className="order-card__items">{order.items?.map((item) => <div key={item.key || item.product.id}><img src={item.product.images[0]} alt="" /><div><strong>{item.product.name}</strong><span>{item.color} / {item.size} · Qty {item.quantity}</span></div><b>{formatMoney((item.product.salePrice || item.product.price) * item.quantity)}</b></div>)}</div></article> : <EmptyState title="No orders yet" copy="Your first Scudo order will appear here after checkout." action={<Link to="/shop" className="button button-dark">Shop the rotation <Icon name="arrow" size={16} /></Link>} />}</div></main>
+  return <main className="orders-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Your orders' }]} /><div className="account-page-heading"><span className="eyebrow">Your rotation</span><h1>Orders.</h1><p>Every piece you’ve added to the journey.</p></div>{order ? <article className="order-card"><div className="order-card__head"><div><span className="eyebrow">Order {order.number}</span><h2>{order.payment?.status === 'Paid' ? 'Payment verified.' : 'Payment processing.'}</h2></div><span className="status-pill">{order.payment?.status || 'Processing'}</span></div><div className="order-card__meta"><div><span>Date</span><strong>{new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN')}</strong></div><div><span>Ship to</span><strong>{order.city || 'Your city'}, {order.country || 'India'}</strong></div><div><span>Total</span><strong>{formatMoney(order.total || 0)}</strong></div></div><div className="order-card__items">{order.items?.map((item) => <div key={item.key || item.product.id}><img src={item.product.images[0]} alt="" /><div><strong>{item.product.name}</strong><span>{item.color} / {item.size} · Qty {item.quantity}</span></div><b>{formatMoney((item.product.salePrice || item.product.price) * item.quantity)}</b></div>)}</div></article> : <EmptyState title="No orders yet" copy="Your first Scudo order will appear here after checkout." action={<Link to="/shop" className="button button-dark">Shop the rotation <Icon name="arrow" size={16} /></Link>} />}</div></main>
 }
 
 function SettingsPage({ account }) {
@@ -730,7 +657,7 @@ function SettingsPage({ account }) {
   return <main className="settings-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Settings' }]} /><div className="account-page-heading"><span className="eyebrow">Account preferences</span><h1>Settings.</h1><p>Keep your Scudo details current.</p></div><form className="settings-card" onSubmit={(event) => { event.preventDefault(); setSaved(true); window.setTimeout(() => setSaved(false), 1800) }}><label className="field"><span>Full name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label><label className="field"><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><div className="settings-card__footer"><span className="demo-note">Demo profile settings. Connect your auth provider before launch.</span><button className="button button-dark" type="submit">{saved ? 'Saved' : 'Save changes'} <Icon name={saved ? 'check' : 'arrow'} size={16} /></button></div></form></div></main>
 }
 
-function AdminPage() { const [authed, setAuthed] = usePersistedState('scudo-admin-auth', false); const [announcement, setAnnouncement] = usePersistedState('scudo-announcement', 'DROP 01 — THE FIRST XI'); const [saved, setSaved] = useState(false); if (!authed) return <main className="account-page"><div className="account-card"><span className="eyebrow">Store admin</span><h1>Keep the team sheet current.</h1><p>Protected demo foundation for catalog, inventory, content, and order operations.</p><button className="button button-dark" onClick={() => setAuthed(true)}>Enter demo dashboard <Icon name="arrow" size={16} /></button><p className="demo-note">Demo access only. Replace this gate with your auth provider before launch.</p></div></main>; return <main className="admin-page"><div className="page-shell"><div className="admin-header"><div><span className="eyebrow">Scudo / Store admin</span><h1>Good morning, manager.</h1></div><button className="button button-ghost" onClick={() => setAuthed(false)}>Log out</button></div><div className="admin-stats">{[['Live products', products.filter((p) => !p.isSoldOut).length, 'catalog'], ['Inventory value', formatMoney(products.reduce((sum, p) => sum + p.price * p.inventory, 0)), 'at retail'], ['Low stock', products.filter((p) => p.inventory > 0 && p.inventory < 8).length, 'needs a look'], ['Orders today', 'Demo', 'connect payments']].map(([label, value, note]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div><div className="admin-grid"><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Content</span><h2>Announcement bar</h2></div><span className="status-pill">Live</span></div><p>Edit the message shown above the storefront header.</p><div className="admin-edit-row"><input value={announcement} onChange={(e) => { setAnnouncement(e.target.value); setSaved(false) }} /><button className="button button-dark" onClick={() => setSaved(true)}>Save</button></div>{saved && <span className="form-success">Saved to demo store.</span>}</section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Catalog</span><h2>Products</h2></div><Link to="/shop" className="text-link">View storefront <Icon name="arrow" size={14} /></Link></div><div className="admin-products">{products.map((product) => <div key={product.id}><img src={product.images[0]} alt="" /><span>{product.name}<small>{product.sku}</small></span><strong className={product.inventory < 8 ? 'low-stock' : ''}>{product.isSoldOut ? 'Sold out' : `${product.inventory} in stock`}</strong><button className="icon-button" aria-label={`Edit ${product.name}`}><Icon name="chevron" size={15} /></button></div>)}</div></section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Operations</span><h2>Next connections</h2></div></div><div className="admin-checklist">{['Product image storage', 'Razorpay / Stripe payments', 'Supabase authentication', 'Orders + fulfillment webhooks'].map((item, i) => <div key={item}><span className={i === 0 ? 'check is-done' : 'check'}>{i === 0 && <Icon name="check" size={13} />}</span>{item}<span className="connection-status">{i === 0 ? 'Ready for upload' : 'Not configured'}</span></div>)}</div></section></div></div></main> }
+function AdminPage() { const [authed, setAuthed] = usePersistedState('scudo-admin-auth', false); const [announcement, setAnnouncement] = usePersistedState('scudo-announcement', 'DROP 01 — THE FIRST XI'); const [saved, setSaved] = useState(false); if (!authed) return <main className="account-page"><div className="account-card"><span className="eyebrow">Store admin</span><h1>Keep the team sheet current.</h1><p>Protected demo foundation for catalog, inventory, content, and order operations.</p><button className="button button-dark" onClick={() => setAuthed(true)}>Enter demo dashboard <Icon name="arrow" size={16} /></button><p className="demo-note">Demo access only. Replace this gate with your auth provider before launch.</p></div></main>; return <main className="admin-page"><div className="page-shell"><div className="admin-header"><div><span className="eyebrow">Scudo / Store admin</span><h1>Good morning, manager.</h1></div><button className="button button-ghost" onClick={() => setAuthed(false)}>Log out</button></div><div className="admin-stats">{[['Live products', products.filter((p) => !p.isSoldOut).length, 'catalog'], ['Inventory value', formatMoney(products.reduce((sum, p) => sum + p.price * p.inventory, 0)), 'at retail'], ['Low stock', products.filter((p) => p.inventory > 0 && p.inventory < 8).length, 'needs a look'], ['Payment gateway', 'Razorpay', 'server verified']].map(([label, value, note]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div><div className="admin-grid"><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Content</span><h2>Announcement bar</h2></div><span className="status-pill">Live</span></div><p>Edit the message shown above the storefront header.</p><div className="admin-edit-row"><input value={announcement} onChange={(e) => { setAnnouncement(e.target.value); setSaved(false) }} /><button className="button button-dark" onClick={() => setSaved(true)}>Save</button></div>{saved && <span className="form-success">Saved to demo store.</span>}</section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Catalog</span><h2>Products</h2></div><Link to="/shop" className="text-link">View storefront <Icon name="arrow" size={14} /></Link></div><div className="admin-products">{products.map((product) => <div key={product.id}><img src={product.images[0]} alt="" /><span>{product.name}<small>{product.sku}</small></span><strong className={product.inventory < 8 ? 'low-stock' : ''}>{product.isSoldOut ? 'Sold out' : `${product.inventory} in stock`}</strong><button className="icon-button" aria-label={`Edit ${product.name}`}><Icon name="chevron" size={15} /></button></div>)}</div></section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Operations</span><h2>Next connections</h2></div></div><div className="admin-checklist">{['Product image storage', 'Razorpay secure payments', 'Supabase authentication', 'Payment capture webhooks'].map((item, i) => <div key={item}><span className={i !== 2 ? 'check is-done' : 'check'}>{i !== 2 && <Icon name="check" size={13} />}</span>{item}<span className="connection-status">{i === 2 ? 'Not configured' : i === 0 ? 'Ready for upload' : 'Configured in code'}</span></div>)}</div></section></div></div></main> }
 
 export default function App() {
   const route = useRoute()
@@ -755,7 +682,7 @@ export default function App() {
   const updateQuantity = (key, quantity) => setCart((current) => quantity < 1 ? current.filter((item) => item.key !== key) : current.map((item) => item.key === key ? { ...item, quantity } : item))
   const removeCartItem = (key) => setCart((current) => current.filter((item) => item.key !== key))
   const quickAdd = (product) => { if (!product.isSoldOut) return addToCart(product, product.sizes[0], product.colors[0], 1); return 'sold-out' }
-  const placeOrder = (data) => { const nextOrder = { ...data, number: `SC-${Date.now().toString().slice(-6)}` }; setOrder(nextOrder); setCart([]); navigate('/order-confirmation') }
+  const placeOrder = (data) => { const nextOrder = { ...data, number: data.number || `SC-${Date.now().toString().slice(-6)}`, createdAt: new Date().toISOString() }; setOrder(nextOrder); setCart([]); navigate('/order-confirmation') }
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0)
   let content
   if (path === '/') content = <HomePage wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
