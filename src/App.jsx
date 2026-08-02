@@ -441,9 +441,7 @@ function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
       <div className={`hero-visual hero-visual--${heroProduct.id}`}>
         <span className="hero-stage-label">The matchday rotation</span>
         <CatalogImage key={heroProduct.id} src={heroProduct.images[0]} alt={`${heroProduct.name} product image`} sizes="(max-width: 740px) 100vw, 56vw" loading="eager" fetchPriority="high" />
-        <div className="hero-stamp"><span>{String(heroIndex + 1).padStart(2, '0')}</span><span>/ {String(campaignProducts.length).padStart(2, '0')}</span></div>
         <button className="hero-next" type="button" onClick={() => setHeroIndex((current) => (current + 1) % campaignProducts.length)} aria-label="Show next campaign product"><Icon name="arrow" size={20} /></button>
-        <div className="hero-selector" aria-label="Campaign products">{campaignProducts.map((product, index) => <button key={product.id} className={heroIndex === index ? 'is-active' : ''} onClick={() => setHeroIndex(index)} aria-label={`Show ${product.name}`} aria-pressed={heroIndex === index}><span>{String(index + 1).padStart(2, '0')}</span><i /></button>)}</div>
       </div>
     </section>
     <section className="campaign-ticker" aria-label="Scudo clothing edits"><div className="campaign-ticker__track">{[0, 1].map((copy) => <div key={copy} aria-hidden={copy === 1}>{tickerItems.map((item) => <span key={`${copy}-${item}`}>{item}<i>✦</i></span>)}</div>)}</div></section>
