@@ -17,18 +17,28 @@ function CatalogImage({ src, sizes = '100vw', ...props }) {
   />
 }
 
+const categoryHeroImages = {
+  bestsellers: '/category-heroes/bestsellers.jpg',
+  'new-arrivals': '/category-heroes/new-arrivals.jpg',
+  'shop-all': '/category-heroes/shop-all.jpg',
+  'master-version': '/category-heroes/master-version.jpg',
+  'player-version': '/category-heroes/player-version.jpg',
+  'affordable-kits': '/category-heroes/affordable-kits.jpg'
+}
 
 const collections = [
-  { title: 'Master Version', eyebrow: '01 / Matchday standard', copy: 'Detailed builds for the full ninety.', image: catalogImages('brazil-home', 4)[3], path: '/shop?edit=master-version', tone: 'ink' },
-  { title: 'Player Version', eyebrow: '02 / Lightweight', copy: 'Athletic cuts made for movement.', image: catalogImages('real-madrid-home', 3)[2], path: '/shop?edit=player-version', tone: 'sand' },
-  { title: 'Affordable Kits', eyebrow: '03 / Easy rotation', copy: 'Strong shirts at an easier price.', image: catalogImages('brazil-blue-away', 5)[4], path: '/shop?edit=affordable-kits', tone: 'cream' }
+  { title: 'Master Version', eyebrow: '01 / Matchday standard', copy: 'Detailed builds for the full ninety.', image: categoryHeroImages['master-version'], path: '/shop?edit=master-version', tone: 'ink' },
+  { title: 'Player Version', eyebrow: '02 / Lightweight', copy: 'Athletic cuts made for movement.', image: categoryHeroImages['player-version'], path: '/shop?edit=player-version', tone: 'sand' },
+  { title: 'Affordable Kits', eyebrow: '03 / Easy rotation', copy: 'Strong shirts at an easier price.', image: categoryHeroImages['affordable-kits'], path: '/shop?edit=affordable-kits', tone: 'cream' }
 ]
 
 const menuCards = [
-  { label: 'New arrivals', path: '/shop?edit=new-arrivals', image: catalogImages('argentina-champions-home', 3)[2] },
-  { label: 'Player version', path: '/shop?edit=player-version', image: catalogImages('portugal-away', 3)[2] },
-  { label: 'Master version', path: '/shop?edit=master-version', image: catalogImages('france-home', 3)[2] },
-  { label: 'Affordable kits', path: '/shop?edit=affordable-kits', image: catalogImages('portugal-home-kit', 3)[2] }
+  { label: 'Bestsellers', path: '/shop?edit=bestsellers', image: categoryHeroImages.bestsellers },
+  { label: 'New arrivals', path: '/shop?edit=new-arrivals', image: categoryHeroImages['new-arrivals'] },
+  { label: 'Shop all', path: '/shop', image: categoryHeroImages['shop-all'] },
+  { label: 'Master version', path: '/shop?edit=master-version', image: categoryHeroImages['master-version'] },
+  { label: 'Player version', path: '/shop?edit=player-version', image: categoryHeroImages['player-version'] },
+  { label: 'Affordable kits', path: '/shop?edit=affordable-kits', image: categoryHeroImages['affordable-kits'] }
 ]
 
 const menuCategories = [
@@ -242,7 +252,7 @@ function useMotionSystem(route) {
   useEffect(() => {
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     const root = document.documentElement
-    const motionSelector = '.hero-copy, .hero-visual, .campaign-ticker, .section-heading, .campaign-product-lead, .campaign-product-side, .product-card, .image-index-card, .editorial-image-section, .collection-card, .story-image, .story-copy, .benefit, .shop-heading, .shop-toolbar, .shop-results, .product-gallery, .gallery-tile, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
+    const motionSelector = '.hero-copy, .hero-visual, .campaign-ticker, .section-heading, .campaign-product-lead, .campaign-product-side, .product-card, .image-index-card, .editorial-image-section, .collection-card, .story-image, .story-copy, .benefit, .shop-heading, .shop-category-hero, .shop-toolbar, .shop-results, .product-gallery, .gallery-tile, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
     const updateScrollState = () => {
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight
       const progress = maxScroll > 0 ? Math.min(1, window.scrollY / maxScroll) : 0
@@ -443,13 +453,25 @@ function ShopPage({ wishlist, onToggleWishlist, onQuickAdd, initialCategory }) {
   const params = new URLSearchParams(window.location.search)
   const edit = params.get('edit')
   const pageTitle = initialCategory || catalogEditLabels[edit] || 'Shop all'
+  const heroKey = edit && categoryHeroImages[edit] ? edit : 'shop-all'
+  const heroImage = categoryHeroImages[heroKey]
   const [sort, setSort] = useState(params.get('sort') || 'featured')
   const visibleProducts = useMemo(() => products.filter((product) => {
     const matchesEdit = !edit || product.edits?.includes(edit)
     const matchesCategory = !initialCategory || product.category === initialCategory
     return matchesEdit && matchesCategory
   }).sort((a, b) => sort === 'newest' ? Number(b.isNew) - Number(a.isNew) : sort === 'price-low' ? (a.salePrice || a.price) - (b.salePrice || b.price) : sort === 'price-high' ? (b.salePrice || b.price) - (a.salePrice || a.price) : Number(b.isFeatured) - Number(a.isFeatured)), [initialCategory, sort, edit])
-  return <main className="shop-page"><div className="page-shell"><Breadcrumbs items={[{ label: pageTitle }]} /><div className="shop-heading"><div><span className="eyebrow">{edit ? 'Curated team sheet' : 'The full rotation'}</span><h1>{pageTitle}</h1></div><p>Official Scudo product photography, organised for quick discovery.</p></div><div className="shop-toolbar"><span className="product-count">{visibleProducts.length} pieces</span><div className="sort-select"><label htmlFor="sort">Sort by</label><select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="newest">Newest</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option></select><Icon name="chevron" size={14} /></div></div><div className="shop-results shop-results--full">{visibleProducts.length ? <div className="product-grid product-grid--three">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Nothing in this rotation" copy="This edit is being prepared. Explore the full collection in the meantime." action={<Link to="/shop" className="button button-dark">Shop all pieces</Link>} />}</div></div></main>
+  return <main className="shop-page"><div className="page-shell"><Breadcrumbs items={[{ label: pageTitle }]} />
+    <section className={`shop-category-hero shop-category-hero--${heroKey}`}>
+      <div className="shop-category-hero__copy">
+        <span className="eyebrow">{edit ? 'Curated team sheet' : initialCategory ? `${initialCategory} rotation` : 'The full rotation'}</span>
+        <h1>{pageTitle}</h1>
+        <p>Official Scudo product photography, organised for quick discovery.</p>
+        <div className="shop-category-hero__meta"><span>{String(visibleProducts.length).padStart(2, '0')}</span><small>pieces in this edit</small></div>
+      </div>
+      <div className="shop-category-hero__media"><CatalogImage src={heroImage} alt={`${pageTitle} featured Scudo jersey`} sizes="(max-width: 740px) 100vw, 58vw" loading="eager" fetchPriority="high" /><span>Scudo / {pageTitle}</span></div>
+    </section>
+    <div className="shop-toolbar"><span className="product-count">{visibleProducts.length} pieces</span><div className="sort-select"><label htmlFor="sort">Sort by</label><select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="newest">Newest</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option></select><Icon name="chevron" size={14} /></div></div><div className="shop-results shop-results--full">{visibleProducts.length ? <div className="product-grid product-grid--three">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Nothing in this rotation" copy="This edit is being prepared. Explore the full collection in the meantime." action={<Link to="/shop" className="button button-dark">Shop all pieces</Link>} />}</div></div></main>
 }
 
 function EmptyState({ title, copy, action }) { return <div className="empty-state"><div className="empty-mark">SC</div><span className="eyebrow">Nothing here yet</span><h2>{title}</h2><p>{copy}</p>{action}</div> }
