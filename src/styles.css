@@ -19,6 +19,7 @@
   --muted: #77736c;
   --display: 'Bree Serif', 'Cooper Black', Fraunces, Georgia, serif;
   --body: 'DM Sans', Inter, Manrope, Arial, sans-serif;
+  --price-font: 'DM Sans', Inter, 'Helvetica Neue', Arial, sans-serif;
   --motion-instant: 100ms;
   --motion-fast: 180ms;
   --motion-ui: 260ms;
@@ -268,9 +269,36 @@ h1, h2, h3 { font-weight: 400; }
 .quick-add:disabled { cursor: not-allowed; opacity: .6; }
 .product-meta { display: grid; grid-template-columns: 1fr auto; gap: 7px 12px; padding-top: 14px; }
 .product-name { min-width: 0; font-family: var(--display); font-size: 16px; letter-spacing: -.035em; line-height: 1.1; }
-.product-price { text-align: right; font-size: 12px; font-weight: 700; white-space: nowrap; }
-.sale-price { color: var(--green); }
-.was-price { margin-left: 7px; color: #9a958d; text-decoration: line-through; font-size: 10px; font-weight: 500; }
+.product-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 7px;
+  color: var(--ink);
+  font-family: var(--price-font);
+  font-size: 12px;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 700;
+  font-feature-settings: 'lnum' 1, 'tnum' 1;
+  letter-spacing: -.025em;
+  line-height: 1.15;
+  text-align: right;
+  white-space: nowrap;
+}
+.sale-price { color: var(--green); font-family: var(--price-font); font-weight: 700; }
+.was-price {
+  margin-left: 0;
+  color: #858077;
+  font-family: var(--price-font);
+  font-size: 10px;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 500;
+  font-feature-settings: 'lnum' 1, 'tnum' 1;
+  letter-spacing: -.015em;
+  text-decoration: line-through;
+  text-decoration-color: rgba(17,17,17,.55);
+  text-decoration-thickness: 1px;
+}
 .product-detail-line { grid-column: 1 / -1; display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; }
 .section-featured--campaign { padding-top: 130px; padding-bottom: 130px; }
 .campaign-product-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; }
@@ -395,8 +423,21 @@ h1, h2, h3 { font-weight: 400; }
 .product-gallery__swipe-note { display: none; }
 .product-info { position: sticky; top: 112px; padding-top: 32px; }
 .product-info h1 { max-width: 460px; margin: 15px 0 17px; font-family: var(--display); font-size: clamp(43px, 5vw, 69px); letter-spacing: -.065em; line-height: .94; }
-.detail-price { display: flex; align-items: baseline; gap: 12px; margin-bottom: 29px; font-family: var(--display); font-size: clamp(30px, 3vw, 44px); font-weight: 400; letter-spacing: -.045em; line-height: 1; }
-.detail-price .was-price { margin-left: 0; font-family: var(--body); font-size: 14px; font-weight: 500; letter-spacing: 0; }
+.detail-price {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 29px;
+  color: var(--ink);
+  font-family: var(--price-font);
+  font-size: clamp(28px, 2.7vw, 40px);
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 700;
+  font-feature-settings: 'lnum' 1, 'tnum' 1;
+  letter-spacing: -.045em;
+  line-height: 1.05;
+}
+.detail-price .was-price { margin-left: 0; font-size: clamp(13px, 1.1vw, 15px); font-weight: 500; letter-spacing: -.015em; }
 .detail-price .tax-note { color: var(--muted); font-family: var(--body); font-size: 9px; font-weight: 500; letter-spacing: .02em; }
 .detail-description { max-width: 430px; margin-bottom: 37px; color: var(--muted); font-size: 13px; line-height: 1.7; }
 .selector-block { max-width: 430px; border-top: 1px solid var(--line); padding: 18px 0; }
@@ -449,6 +490,18 @@ h1, h2, h3 { font-weight: 400; }
 .cart-line-info > a { max-width: 170px; font-family: var(--display); font-size: 17px; letter-spacing: -.04em; line-height: 1.08; }
 .cart-line-info > span { margin-top: 7px; color: var(--muted); font-size: 10px; }
 .cart-line-info > strong { margin-top: auto; font-size: 12px; }
+.cart-line-info > strong,
+.drawer-summary strong,
+.summary-lines strong,
+.summary-total strong,
+.confirmation-meta strong,
+.order-card__meta strong,
+.order-card__items b {
+  font-family: var(--price-font);
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: 'lnum' 1, 'tnum' 1;
+  letter-spacing: -.02em;
+}
 .remove-line { align-self: start; border: 0; background: transparent; color: var(--muted); padding: 0; }
 .mini-quantity { display: flex; align-items: center; gap: 2px; border: 1px solid var(--line); margin-top: 12px; }
 .mini-quantity button { width: 24px; height: 25px; }
