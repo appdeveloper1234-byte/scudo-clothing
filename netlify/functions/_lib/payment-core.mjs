@@ -12,6 +12,7 @@ export class PaymentInputError extends Error {
 const productById = new Map(products.map((product) => [product.id, product]))
 const MAX_DISTINCT_ITEMS = 20
 const MAX_QUANTITY_PER_LINE = 5
+const SHIPPING_CHARGE = 50
 
 function requiredText(value, field, maxLength) {
   if (typeof value !== 'string') throw new PaymentInputError(`${field} is required.`)
@@ -71,15 +72,14 @@ export function calculateOrder(inputItems) {
     return { productId, name: product.name, sku: product.sku, size, color, quantity, unitAmount, lineTotal: unitAmount * quantity }
   })
   const subtotal = lineItems.reduce((sum, item) => sum + item.lineTotal, 0)
-  const shipping = subtotal >= 3500 ? 0 : 150
-  const tax = Math.round(subtotal * 0.05)
-  const total = subtotal + shipping + tax
+  const shipping = SHIPPING_CHARGE
+  const total = subtotal + shipping
   if (!Number.isSafeInteger(total) || total < 1) throw new PaymentInputError('The order total is invalid.')
-  return { lineItems, subtotal, shipping, tax, total, amount: total * 100, currency: 'INR' }
+  return { lineItems, subtotal, shipping, total, amount: total * 100, currency: 'INR' }
 }
 
 export function buildTrustedOrder(payload) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new PaymentInputError('Invalid payment request.')
-  if (payload.termsAccepted !== true) throw new PaymentInputError('Accept the terms and final-sale policy to continue.')
+  if (payload.termsAccepted !== true) throw new PaymentInputError('Accept the terms, return policy, and privacy policy to continue.')
   return { customer: validateCustomer(payload.customer), ...calculateOrder(payload.items) }
 }

@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>/</loc></url>
-  <url><loc>/shop</loc></url>
-  <url><loc>/shop/jerseys</loc></url>
-  <url><loc>/shop/t-shirts</loc></url>
-  <url><loc>/collections</loc></url>
-  <url><loc>/about</loc></url>
-  <url><loc>/size-guide</loc></url>
-  <url><loc>/shipping-final-sale</loc></url>
-  <url><loc>/contact</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/shop</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/shop/jerseys</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/shop/t-shirts</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/collections</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/about</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/size-guide</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/shipping-final-sale</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/returns</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/privacy</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/terms</loc></url>
+  <url><loc>https://zeroxclothing.netlify.app/contact</loc></url>
 </urlset>

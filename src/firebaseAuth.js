@@ -100,6 +100,16 @@ export async function signOutFirebase() {
   if (firebaseAuth?.currentUser) await signOut(firebaseAuth)
 }
 
+export async function getFirebaseIdToken(forceRefresh = false) {
+  const auth = requireFirebaseAuth()
+  if (!auth.currentUser) {
+    const error = new Error('Sign in is required.')
+    error.code = 'auth/admin-sign-in-required'
+    throw error
+  }
+  return auth.currentUser.getIdToken(forceRefresh)
+}
+
 export function firebaseAuthErrorMessage(error, method = 'google') {
   const messages = {
     'auth/firebase-not-configured': `${method === 'google' ? 'Google sign-in' : 'Account authentication'} is not configured yet. Add the Firebase environment variables in Netlify.`,

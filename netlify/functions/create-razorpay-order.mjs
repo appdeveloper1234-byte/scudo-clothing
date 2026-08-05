@@ -30,7 +30,6 @@ export default async (request) => {
       currency: trusted.currency,
       subtotal: trusted.subtotal,
       shipping: trusted.shipping,
-      tax: trusted.tax,
       lineItems: trusted.lineItems,
       customer: trusted.customer,
       status: 'created',
@@ -47,7 +46,7 @@ export default async (request) => {
       receipt,
       amount: trusted.amount,
       currency: trusted.currency,
-      breakdown: { subtotal: trusted.subtotal, shipping: trusted.shipping, tax: trusted.tax, total: trusted.total },
+      breakdown: { subtotal: trusted.subtotal, shipping: trusted.shipping, total: trusted.total },
       items: trusted.lineItems.map(({ productId, name, size, color, quantity, unitAmount }) => ({ productId, name, size, color, quantity, unitAmount }))
     })
   } catch (error) {

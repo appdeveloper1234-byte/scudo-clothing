@@ -3,16 +3,17 @@ import { createPortal } from 'react-dom'
 import { products } from './productCatalog.js'
 import { payWithRazorpay } from './razorpay.js'
 import { authenticateWithEmail, firebaseAuthErrorMessage, signInWithGoogle, signOutFirebase, watchFirebaseAuth } from './firebaseAuth.js'
+import { loadAdminDashboard, updateAdminOrder } from './adminApi.js'
 
 const catalogImages = (slug, count) => Array.from({ length: count }, (_, index) => `/catalog/${slug}/${String(index + 1).padStart(2, '0')}.webp`)
 const catalogVariant = (src, width) => src.replace(/\.webp$/, `-${width}.webp`)
 
 function CatalogImage({ src, sizes = '100vw', ...props }) {
-  const isCatalogImage = typeof src === 'string' && src.startsWith('/catalog/')
+  const hasResponsiveVariants = typeof src === 'string' && (src.startsWith('/catalog/') || src.startsWith('/shop-all-main/'))
   return <img
     src={src}
-    srcSet={isCatalogImage ? `${catalogVariant(src, 480)} 480w, ${catalogVariant(src, 960)} 960w, ${src} 1600w` : undefined}
-    sizes={isCatalogImage ? sizes : undefined}
+    srcSet={hasResponsiveVariants ? `${catalogVariant(src, 480)} 480w, ${catalogVariant(src, 960)} 960w, ${src} 1600w` : undefined}
+    sizes={hasResponsiveVariants ? sizes : undefined}
     decoding="async"
     {...props}
   />
@@ -57,6 +58,7 @@ const catalogEditLabels = {
 }
 
 const formatMoney = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)
+const SHIPPING_CHARGE = 50
 
 const socialLinks = [
   { name: 'Instagram', handle: '@scudoclothings', href: 'https://www.instagram.com/scudoclothings/', icon: 'instagram' },
@@ -145,7 +147,7 @@ function BrandIntro({ onComplete }) {
     const start = async () => {
       try {
         await Promise.race([
-          document.fonts?.load('900 116px "Scudo Recoleta"') || Promise.resolve(),
+          document.fonts?.load('400 126px "Scudo Wordmark"') || Promise.resolve(),
           new Promise((resolve) => window.setTimeout(resolve, 280))
         ])
       } catch {}
@@ -359,7 +361,7 @@ function Header({ cartCount, wishlistCount, onCartOpen, account }) {
         </div>
       </div>
     </header>
-    {menuOpen && <div className="mobile-menu-overlay" onClick={closeMenu}><aside className="mobile-drawer" ref={menuRef} onClick={(event) => event.stopPropagation()} aria-label="Categories menu"><div className="drawer-top"><button className="drawer-close" onClick={closeMenu} aria-label="Close categories menu"><Icon name="close" /></button><span className="drawer-title">Categories</span><span className="drawer-top-spacer" /></div><div className="menu-featured" aria-label="Featured collections">{menuCards.map((card) => <Link key={card.label} to={card.path} onClick={closeMenu} aria-label={card.label}><div className="menu-featured__image"><CatalogImage src={card.image} alt="" sizes="160px" loading="eager" /></div></Link>)}</div><div className="menu-section-label">Scudo / Categories</div><nav className="category-nav" aria-label="Scudo categories">{menuCategories.map((item) => <Link key={item.label} to={item.path} onClick={closeMenu}><span><strong>{item.label}</strong><small>{item.note}</small></span><Icon name="arrow" size={18} /></Link>)}</nav><div className="drawer-secondary"><Link to="/shop/jerseys" onClick={closeMenu}>Jerseys</Link><Link to="/shop/t-shirts" onClick={closeMenu}>T-shirts</Link><Link to="/collections" onClick={closeMenu}>Collections</Link><Link to="/about" onClick={closeMenu}>About</Link></div><div className="drawer-account-links"><Link to={account ? '/orders' : '/account'} onClick={closeMenu}>{account ? 'Your orders' : 'Log in / Sign up'} <Icon name="arrow" size={15} /></Link><Link to="/wishlist" onClick={closeMenu}>Wishlist {wishlistCount > 0 && `(${wishlistCount})`} <Icon name="heart" size={15} /></Link>{account && <Link to="/settings" onClick={closeMenu}>Settings <Icon name="arrow" size={15} /></Link>}</div><div className="mobile-menu-footer"><Link to="/size-guide" onClick={closeMenu}>Size guide</Link><Link to="/shipping-final-sale" onClick={closeMenu}>Shipping & final sale</Link><Link to="/contact" onClick={closeMenu}>Contact</Link></div></aside></div>}
+    {menuOpen && <div className="mobile-menu-overlay" onClick={closeMenu}><aside className="mobile-drawer" ref={menuRef} onClick={(event) => event.stopPropagation()} aria-label="Categories menu"><div className="drawer-top"><button className="drawer-close" onClick={closeMenu} aria-label="Close categories menu"><Icon name="close" /></button><span className="drawer-title">Categories</span><span className="drawer-top-spacer" /></div><div className="menu-featured" aria-label="Featured collections">{menuCards.map((card) => <Link key={card.label} to={card.path} onClick={closeMenu} aria-label={card.label}><div className="menu-featured__image"><CatalogImage src={card.image} alt="" sizes="160px" loading="eager" /></div></Link>)}</div><div className="menu-section-label">Scudo / Categories</div><nav className="category-nav" aria-label="Scudo categories">{menuCategories.map((item) => <Link key={item.label} to={item.path} onClick={closeMenu}><span><strong>{item.label}</strong><small>{item.note}</small></span><Icon name="arrow" size={18} /></Link>)}</nav><div className="drawer-secondary"><Link to="/shop/jerseys" onClick={closeMenu}>Jerseys</Link><Link to="/shop/t-shirts" onClick={closeMenu}>T-shirts</Link><Link to="/collections" onClick={closeMenu}>Collections</Link><Link to="/about" onClick={closeMenu}>About</Link></div><div className="drawer-account-links"><Link to={account ? '/orders' : '/account'} onClick={closeMenu}>{account ? 'Your orders' : 'Log in / Sign up'} <Icon name="arrow" size={15} /></Link><Link to="/wishlist" onClick={closeMenu}>Wishlist {wishlistCount > 0 && `(${wishlistCount})`} <Icon name="heart" size={15} /></Link>{account && <Link to="/settings" onClick={closeMenu}>Settings <Icon name="arrow" size={15} /></Link>}</div><div className="mobile-menu-footer"><Link to="/size-guide" onClick={closeMenu}>Size guide</Link><Link to="/shipping-final-sale" onClick={closeMenu}>Shipping & returns</Link><Link to="/returns" onClick={closeMenu}>Return policy</Link><Link to="/contact" onClick={closeMenu}>Contact</Link></div></aside></div>}
   </>
 }
 
@@ -376,20 +378,21 @@ function Footer() {
       </div>
       <div className="footer-links">
         <div><p className="footer-label">Shop</p><Link to="/shop">All pieces</Link><Link to="/shop/jerseys">Jerseys</Link><Link to="/shop/t-shirts">T-shirts</Link><Link to="/collections">Collections</Link></div>
-        <div><p className="footer-label">Customer care</p><Link to="/size-guide">Size guide</Link><Link to="/shipping-final-sale">Shipping & final sale</Link><Link to="/contact">Contact</Link><Link to="/account">Account</Link></div>
+        <div><p className="footer-label">Customer care</p><Link to="/size-guide">Size guide</Link><Link to="/shipping-final-sale">Shipping & returns</Link><Link to="/returns">Return policy</Link><Link to="/contact">Contact</Link><Link to="/account">Account</Link></div>
       </div>
     </div>
-    <div className="footer-bottom"><span>© {new Date().getFullYear()} Scudo Clothing</span><div><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/about">About us</Link></div><span>Made for movement.</span></div>
+    <div className="footer-bottom"><span>© {new Date().getFullYear()} Scudo Clothing</span><div><Link to="/privacy">Privacy</Link><Link to="/terms">Terms</Link><Link to="/returns">Return policy</Link><Link to="/about">About us</Link></div><span>Made for movement.</span></div>
   </footer>
 }
 
 function ProductCardLegacy({ product, onQuickAdd, wishlist, onToggleWishlist }) {
   const isWished = wishlist.includes(product.id)
-  return <article className="product-card"><div className="product-image-wrap"><Link to={`/product/${product.slug}`} className="product-image-link"><img src={product.images[0]} alt={`${product.name} — ${product.shortDescription}`} loading="lazy" /><span className="product-status">{product.isSoldOut ? 'Sold out' : product.isNew ? 'New' : product.salePrice ? 'Sale' : 'Available'}</span></Link><WishlistButton active={isWished} onClick={() => onToggleWishlist(product.id)} /><button className="quick-add" onClick={() => onQuickAdd(product)} disabled={product.isSoldOut}>{product.isSoldOut ? 'Sold out' : 'Quick add'}<Icon name="plus" size={15} /></button></div><div className="product-meta"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link><div className="product-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><div className="product-detail-line"><span>{product.colors.join(' / ')}</span><span>{product.sizes.length} sizes</span></div></div></article>
+  return <article className="product-card"><div className="product-image-wrap"><Link to={`/product/${product.slug}`} className="product-image-link"><img src={product.shopImage || product.images[0]} alt={`${product.name} — ${product.shortDescription}`} loading="lazy" /><span className="product-status">{product.isSoldOut ? 'Sold out' : product.isNew ? 'New' : product.salePrice ? 'Sale' : 'Available'}</span></Link><WishlistButton active={isWished} onClick={() => onToggleWishlist(product.id)} /><button className="quick-add" onClick={() => onQuickAdd(product)} disabled={product.isSoldOut}>{product.isSoldOut ? 'Sold out' : 'Quick add'}<Icon name="plus" size={15} /></button></div><div className="product-meta"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link><div className="product-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><div className="product-detail-line"><span>{product.sizes.length} sizes</span></div></div></article>
 }
 
 function ProductCard({ product, onQuickAdd, wishlist, onToggleWishlist }) {
   const isWished = wishlist.includes(product.id)
+  const cardImage = product.shopImage || product.images[0]
   const [feedback, setFeedback] = useState('idle')
   const quickAdd = () => {
     const result = onQuickAdd(product)
@@ -397,7 +400,7 @@ function ProductCard({ product, onQuickAdd, wishlist, onToggleWishlist }) {
     window.setTimeout(() => setFeedback('idle'), 1300)
   }
   const feedbackClass = feedback === 'idle' ? '' : `is-${feedback}`
-  return <article className="product-card"><div className="product-image-wrap"><Link to={`/product/${product.slug}`} className="product-image-link"><CatalogImage className="product-image-main" src={product.images[0]} alt={`${product.name} product image`} sizes="(max-width: 740px) 50vw, (max-width: 1000px) 33vw, 25vw" loading="lazy" /><span className="product-status">{product.isSoldOut ? 'Sold out' : product.isNew ? 'New' : product.salePrice ? 'Sale' : 'Available'}</span></Link><WishlistButton active={isWished} onClick={() => onToggleWishlist(product.id)} /><button className={`quick-add ${feedbackClass}`} onClick={quickAdd} disabled={product.isSoldOut}>{product.isSoldOut ? 'Sold out' : feedback === 'added' ? 'Added to bag' : feedback === 'signin' ? 'Sign in required' : 'Quick add'}<Icon name={feedback === 'added' ? 'check' : 'plus'} size={15} /></button></div><div className="product-meta"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link><div className="product-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><div className="product-detail-line"><span>{product.colors.join(' / ')}</span><span>{product.sizes.length} sizes</span></div></div></article>
+  return <article className="product-card"><div className="product-image-wrap"><Link to={`/product/${product.slug}`} className="product-image-link"><CatalogImage className="product-image-main" src={cardImage} alt={`${product.name} product image`} sizes="(max-width: 740px) 50vw, (max-width: 1000px) 33vw, 25vw" loading="lazy" /><span className="product-status">{product.isSoldOut ? 'Sold out' : product.isNew ? 'New' : product.salePrice ? 'Sale' : 'Available'}</span></Link><WishlistButton active={isWished} onClick={() => onToggleWishlist(product.id)} /><button className={`quick-add ${feedbackClass}`} onClick={quickAdd} disabled={product.isSoldOut}>{product.isSoldOut ? 'Sold out' : feedback === 'added' ? 'Added to bag' : feedback === 'signin' ? 'Sign in required' : 'Quick add'}<Icon name={feedback === 'added' ? 'check' : 'plus'} size={15} /></button></div><div className="product-meta"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link><div className="product-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><div className="product-detail-line"><span>{product.sizes.length} sizes</span></div></div></article>
 }
 
 function WishlistButtonLegacy({ active, onClick }) { return <button className={`wishlist-button ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={active ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" size={17} /></button> }
@@ -417,7 +420,7 @@ function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
   const [heroIndex, setHeroIndex] = useState(0)
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
-    const interval = window.setInterval(() => { if (!document.hidden) setHeroIndex((index) => (index + 1) % campaignProducts.length) }, 5600)
+    const interval = window.setInterval(() => { if (!document.hidden) setHeroIndex((index) => (index + 1) % campaignProducts.length) }, 3000)
     return () => window.clearInterval(interval)
   }, [campaignProducts.length])
   const heroProduct = campaignProducts[heroIndex] || products[0]
@@ -425,23 +428,15 @@ function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
   return <main className="home-page">
     <section className="hero hero--campaign">
       <div className="hero-copy">
-        <div className="hero-kicker"><span>Scudo / Matchday edit</span><i /><b>01 / 26</b></div>
         <h1 className="hero-armour-title" aria-label="Armour for everyday">
           <span className="hero-line hero-line--primary"><span>Armour</span></span>
           <span className="hero-line hero-line--accent"><span><small>for</small><em>everyday.</em></span></span>
         </h1>
         <p className="hero-deck">Iconic shirts selected for the match, the walk home, and everything after the final whistle.</p>
         <div className="button-row"><Link to="/shop/jerseys" className="button hero-shop-button"><span>Explore all shirts</span><span className="hero-shop-button__icon"><Icon name="arrow" size={17} /></span></Link></div>
-        <div className="hero-meta" aria-label="Collection details">
-          <div><span>Edition</span><strong>Drop 01</strong></div>
-          <div><span>Selection</span><strong>02 shirts</strong></div>
-          <div><span>Policy</span><strong>Final sale</strong></div>
-        </div>
       </div>
       <div className={`hero-visual hero-visual--${heroProduct.id}`}>
-        <span className="hero-stage-label">The matchday rotation</span>
         <CatalogImage key={heroProduct.id} src={heroProduct.images[0]} alt={`${heroProduct.name} product image`} sizes="(max-width: 740px) 100vw, 56vw" loading="eager" fetchPriority="high" />
-        <button className="hero-next" type="button" onClick={() => setHeroIndex((current) => (current + 1) % campaignProducts.length)} aria-label="Show next campaign product"><Icon name="arrow" size={20} /></button>
       </div>
     </section>
     <section className="campaign-ticker" aria-label="Scudo clothing edits"><div className="campaign-ticker__track">{[0, 1].map((copy) => <div key={copy} aria-hidden={copy === 1}>{tickerItems.map((item) => <span key={`${copy}-${item}`}>{item}<i>✦</i></span>)}</div>)}</div></section>
@@ -457,7 +452,7 @@ function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
     </section>
     <section className="section collection-section"><SectionHeading title="Collections" /><div className="collection-grid">{collections.map((collection) => <Link to={collection.path} className={`collection-card collection-card--${collection.tone}`} key={collection.title}><CatalogImage src={collection.image} alt={`${collection.title} collection`} sizes="(max-width: 740px) 80vw, 33vw" loading="lazy" /><div className="collection-overlay"><span className="eyebrow">{collection.eyebrow}</span><h3>{collection.title}</h3><span className="collection-copy">{collection.copy}</span><span className="circle-link circle-link--small"><Icon name="arrow" size={17} /></span></div></Link>)}</div></section>
     <section className="story-section"><div className="story-image"><CatalogImage src={products.find((product) => product.id === 'france-away')?.images[3]} alt="France away jersey editorial detail" sizes="(max-width: 740px) 100vw, 55vw" loading="lazy" /></div><div className="story-copy"><span className="eyebrow">The Scudo idea</span><h2>Not a kit.<br /><em>A point of view.</em></h2><p>Scudo Clothing brings the codes of football into the everyday — considered fabrics, easy silhouettes, and the confidence to wear your colours your way.</p><Link to="/about" className="text-link">Read our story <Icon name="arrow" size={15} /></Link><div className="story-aside"><span>01</span><span>Football culture,<br />translated for daily life.</span></div></div></section>
-    <section className="benefits-section"><div className="benefit-intro"><span className="eyebrow">The fine print</span><h2>Good pieces<br /><em>make good days.</em></h2></div><div className="benefit-grid">{[['01', 'Quality-first pieces', 'Thoughtful materials, made to be worn often.'], ['02', 'Comfortable everyday fit', 'Relaxed proportions for movement beyond the pitch.'], ['03', 'Limited-release collections', 'Small runs, considered drops, no unnecessary noise.'], ['04', 'Final-sale policy', 'All purchases are final. Please confirm your size before ordering.']].map(([number, title, copy]) => <div className="benefit" key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></div>)}</div></section>
+    <section className="benefits-section"><div className="benefit-intro"><span className="eyebrow">The fine print</span><h2>Good pieces<br /><em>make good days.</em></h2></div><div className="benefit-grid">{[['01', 'Quality-first pieces', 'Thoughtful materials, made to be worn often.'], ['02', 'Comfortable everyday fit', 'Relaxed proportions for movement beyond the pitch.'], ['03', 'Limited-release collections', 'Small runs, considered drops, no unnecessary noise.'], ['04', 'Verified-issue support', 'Report damaged, defective, incorrect, or missing items within 48 hours.']].map(([number, title, copy]) => <div className="benefit" key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></div>)}</div></section>
   </main>
 }
 
@@ -543,25 +538,24 @@ function ProductPage({ product, wishlist, onToggleWishlist, onAddToCart }) {
     window.setTimeout(() => setAddState('idle'), 1700)
   }
   useEffect(() => { const button = document.querySelector('.add-to-bag'); if (button) button.dataset.status = addState }, [addState])
-  return <main className="product-page"><div className="page-shell"><Breadcrumbs items={[{ label: product.category, path: `/shop/${product.category.toLowerCase().replace(' ', '-')}` }, { label: product.name }]} /><div className="product-detail"><ProductGallery product={product} /><div className="product-info"><span className="eyebrow">{product.collection} / {product.category}</span><h1>{product.name}</h1><div className="detail-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)} <span className="tax-note">incl. taxes</span></div><p className="detail-description">{product.description}</p><div className="selector-block"><div className="selector-label"><span>Size</span><Link to="/size-guide">Size guide <Icon name="arrow" size={13} /></Link></div><div className="size-grid">{product.sizes.map((item) => <button key={item} className={size === item ? 'is-selected' : ''} onClick={() => setSize(item)}>{item}</button>)}</div>{!size && <span className="selection-note">Select a size to add this piece.</span>}</div><div className="add-row"><div className="quantity-control"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button onClick={() => setQuantity(Math.min(product.inventory || 1, quantity + 1))} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div><button className="button button-dark add-to-bag" onClick={add} disabled={!size || product.isSoldOut}>{product.isSoldOut ? 'Sold out' : !size ? 'Select a size' : 'Add to bag'} <Icon name="arrow" size={16} /></button><button className={`icon-button detail-wishlist ${wished ? 'is-active' : ''}`} onClick={() => onToggleWishlist(product.id)} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" /></button></div><div className="detail-notes"><div><span>Shipping</span><p>Ships in 2–4 business days across India.</p></div><div><span>Final sale</span><p>All purchases are final. Returns are not accepted.</p></div><div><span>Details</span><p>{product.material}. {product.careInstructions}</p></div></div></div></div><section className="product-lower"><div><span className="eyebrow">Reviews / 03</span><h2>Worn in the wild.</h2></div><div className="review-content"><div className="review-card"><div className="stars">★★★★★</div><p>“Good weight, easy fit. It’s become the jersey I reach for even when there isn’t a game on.”</p><span>— A. Mehta / Verified buyer</span></div><form className="review-form" onSubmit={(event) => { event.preventDefault(); setReviewSent(true) }}><span className="form-title">Leave a review</span><input required placeholder="Your name" aria-label="Your name" /><textarea required placeholder="What did you think?" aria-label="Your review" rows="3" /><button className="button button-ghost" type="submit">{reviewSent ? 'Review submitted' : 'Submit review'}</button></form></div></section><section className="section related-section"><SectionHeading eyebrow="Complete the rotation" title="You may also like" /><div className="product-grid product-grid--four">{products.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} onQuickAdd={(p) => onAddToCart(p, p.sizes[0], p.colors[0], 1)} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section></div></main>
+  return <main className="product-page"><div className="page-shell"><Breadcrumbs items={[{ label: product.category, path: `/shop/${product.category.toLowerCase().replace(' ', '-')}` }, { label: product.name }]} /><div className="product-detail"><ProductGallery product={product} /><div className="product-info"><span className="eyebrow">{product.collection} / {product.category}</span><h1>{product.name}</h1><div className="detail-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><p className="detail-description">{product.description}</p><div className="selector-block"><div className="selector-label"><span>Size</span><Link to="/size-guide">Size guide <Icon name="arrow" size={13} /></Link></div><div className="size-grid">{product.sizes.map((item) => <button key={item} className={size === item ? 'is-selected' : ''} onClick={() => setSize(item)}>{item}</button>)}</div>{!size && <span className="selection-note">Select a size to add this piece.</span>}</div><div className="add-row"><div className="quantity-control"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button onClick={() => setQuantity(Math.min(product.inventory || 1, quantity + 1))} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div><button className="button button-dark add-to-bag" onClick={add} disabled={!size || product.isSoldOut}>{product.isSoldOut ? 'Sold out' : !size ? 'Select a size' : 'Add to bag'} <Icon name="arrow" size={16} /></button><button className={`icon-button detail-wishlist ${wished ? 'is-active' : ''}`} onClick={() => onToggleWishlist(product.id)} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" /></button></div><div className="detail-notes"><div><span>Shipping</span><p>Flat ₹50 shipping. Ships in 4–15 business days across India.</p></div><div><span>Return policy</span><p>Verified damaged, defective, incorrect, or missing-item claims must be raised within 48 hours.</p></div><div><span>Details</span><p>{product.material}. {product.careInstructions}</p></div></div></div></div><section className="product-lower"><div><span className="eyebrow">Reviews / 03</span><h2>Worn in the wild.</h2></div><div className="review-content"><div className="review-card"><div className="stars">★★★★★</div><p>“Good weight, easy fit. It’s become the jersey I reach for even when there isn’t a game on.”</p><span>— A. Mehta / Verified buyer</span></div><form className="review-form" onSubmit={(event) => { event.preventDefault(); setReviewSent(true) }}><span className="form-title">Leave a review</span><input required placeholder="Your name" aria-label="Your name" /><textarea required placeholder="What did you think?" aria-label="Your review" rows="3" /><button className="button button-ghost" type="submit">{reviewSent ? 'Review submitted' : 'Submit review'}</button></form></div></section><section className="section related-section"><SectionHeading eyebrow="Complete the rotation" title="You may also like" /><div className="product-grid product-grid--four">{products.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} onQuickAdd={(p) => onAddToCart(p, p.sizes[0], p.colors[0], 1)} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section></div></main>
 }
 
 function CartDrawer({ open, onClose, cart, onUpdateQuantity, onRemove, onCheckout }) {
   const drawerRef = useOverlayFocus(open, onClose)
   const subtotal = cart.reduce((total, item) => total + (item.product.salePrice || item.product.price) * item.quantity, 0)
-  return open ? <div className="drawer-overlay" onClick={onClose}><aside className="cart-drawer" ref={drawerRef} onClick={(event) => event.stopPropagation()} aria-label="Shopping bag"><div className="drawer-head"><div><span className="eyebrow">Your rotation</span><h2>Shopping bag <small>{cart.reduce((a, i) => a + i.quantity, 0)}</small></h2></div><button className="icon-button" onClick={onClose} aria-label="Close shopping bag"><Icon name="close" /></button></div>{cart.length ? <><div className="drawer-items">{cart.map((item) => <CartLine key={`${item.product.id}-${item.size}-${item.color}`} item={item} onUpdateQuantity={onUpdateQuantity} onRemove={onRemove} compact />)}</div><div className="drawer-summary"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><p>Shipping calculated at checkout. All purchases are final; no returns are accepted.</p><button className="button button-dark" onClick={onCheckout}>Go to checkout <Icon name="arrow" size={16} /></button><Link to="/cart" className="text-link" onClick={onClose}>View bag</Link></div></> : <EmptyState title="Your bag is empty" copy="Add a piece and it will show up here." action={<Link to="/shop" className="button button-dark" onClick={onClose}>Shop the rotation</Link>} />}</aside></div> : null
+  return open ? <div className="drawer-overlay" onClick={onClose}><aside className="cart-drawer" ref={drawerRef} onClick={(event) => event.stopPropagation()} aria-label="Shopping bag"><div className="drawer-head"><div><span className="eyebrow">Your rotation</span><h2>Shopping bag <small>{cart.reduce((a, i) => a + i.quantity, 0)}</small></h2></div><button className="icon-button" onClick={onClose} aria-label="Close shopping bag"><Icon name="close" /></button></div>{cart.length ? <><div className="drawer-items">{cart.map((item) => <CartLine key={`${item.product.id}-${item.size}-${item.color}`} item={item} onUpdateQuantity={onUpdateQuantity} onRemove={onRemove} compact />)}</div><div className="drawer-summary"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><p>Flat ₹50 shipping. Verified product or delivery issues must be reported within 48 hours.</p><button className="button button-dark" onClick={onCheckout}>Go to checkout <Icon name="arrow" size={16} /></button><Link to="/cart" className="text-link" onClick={onClose}>View bag</Link></div></> : <EmptyState title="Your bag is empty" copy="Add a piece and it will show up here." action={<Link to="/shop" className="button button-dark" onClick={onClose}>Shop the rotation</Link>} />}</aside></div> : null
 }
 
 function CartLine({ item, onUpdateQuantity, onRemove, compact = false }) { const price = item.product.salePrice || item.product.price; return <div className={`cart-line ${compact ? 'cart-line--compact' : ''}`}><CatalogImage src={item.product.images[0]} alt={item.product.name} sizes="155px" /><div className="cart-line-info"><Link to={`/product/${item.product.slug}`}>{item.product.name}</Link><span>{item.color} / {item.size}</span><strong>{formatMoney(price * item.quantity)}</strong><div className="mini-quantity"><button onClick={() => onUpdateQuantity(item.key, item.quantity - 1)} aria-label="Decrease quantity"><Icon name="minus" size={12} /></button><span>{item.quantity}</span><button onClick={() => onUpdateQuantity(item.key, item.quantity + 1)} aria-label="Increase quantity"><Icon name="plus" size={12} /></button></div></div><button className="remove-line" onClick={() => onRemove(item.key)} aria-label={`Remove ${item.product.name}`}><Icon name="close" size={15} /></button></div> }
 
 function CartPage({ cart, onUpdateQuantity, onRemove, onCheckout }) {
   const subtotal = cart.reduce((total, item) => total + (item.product.salePrice || item.product.price) * item.quantity, 0)
-  const shipping = subtotal >= 3500 || subtotal === 0 ? 0 : 150
-  const tax = Math.round(subtotal * 0.05)
-  return <main className="cart-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Shopping bag' }]} /><div className="cart-heading"><div><span className="eyebrow">Review your rotation</span><h1>Shopping bag</h1></div>{cart.length > 0 && <span>{cart.reduce((a, i) => a + i.quantity, 0)} pieces</span>}</div>{cart.length ? <div className="cart-layout"><div className="cart-items">{cart.map((item) => <CartLine key={item.key} item={item} onUpdateQuantity={onUpdateQuantity} onRemove={onRemove} />)}<Link to="/shop" className="text-link back-link"><Icon name="back" size={15} /> Continue shopping</Link></div><OrderSummary subtotal={subtotal} shipping={shipping} tax={tax} onCheckout={onCheckout} /></div> : <EmptyState title="No pieces yet" copy="Your bag is waiting for its first addition." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} />}</div></main>
+  const shipping = subtotal > 0 ? SHIPPING_CHARGE : 0
+  return <main className="cart-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Shopping bag' }]} /><div className="cart-heading"><div><span className="eyebrow">Review your rotation</span><h1>Shopping bag</h1></div>{cart.length > 0 && <span>{cart.reduce((a, i) => a + i.quantity, 0)} pieces</span>}</div>{cart.length ? <div className="cart-layout"><div className="cart-items">{cart.map((item) => <CartLine key={item.key} item={item} onUpdateQuantity={onUpdateQuantity} onRemove={onRemove} />)}<Link to="/shop" className="text-link back-link"><Icon name="back" size={15} /> Continue shopping</Link></div><OrderSummary subtotal={subtotal} shipping={shipping} onCheckout={onCheckout} /></div> : <EmptyState title="No pieces yet" copy="Your bag is waiting for its first addition." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} />}</div></main>
 }
 
-function OrderSummary({ subtotal, shipping, tax, onCheckout, checkoutLabel = 'Checkout', disabled = false }) { return <aside className="order-summary"><span className="eyebrow">Summary</span><h2>Matchday total</h2><div className="summary-lines"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><div><span>Shipping</span><strong>{shipping ? formatMoney(shipping) : 'Complimentary'}</strong></div><div><span>Estimated tax</span><strong>{formatMoney(tax)}</strong></div></div><div className="summary-total"><span>Total</span><strong>{formatMoney(subtotal + shipping + tax)}</strong></div><button className="button button-dark" type="button" onClick={onCheckout} disabled={!subtotal || disabled}>{checkoutLabel} <Icon name="arrow" size={16} /></button><p className="secure-note">Totals are verified on our server · payments secured by Razorpay · all sales final.</p></aside> }
+function OrderSummary({ subtotal, shipping, onCheckout, checkoutLabel = 'Checkout', disabled = false }) { return <aside className="order-summary"><span className="eyebrow">Summary</span><h2>Matchday total</h2><div className="summary-lines"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><div><span>Shipping</span><strong>{formatMoney(shipping)}</strong></div></div><div className="summary-total"><span>Total</span><strong>{formatMoney(subtotal + shipping)}</strong></div><button className="button button-dark" type="button" onClick={onCheckout} disabled={!subtotal || disabled}>{checkoutLabel} <Icon name="arrow" size={16} /></button><p className="secure-note">Totals are verified on our server · payments secured by Razorpay · all sales final.</p></aside> }
 
 function CheckoutPage({ cart, onPlaceOrder }) {
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '', country: 'India', postal: '', terms: false })
@@ -570,14 +564,13 @@ function CheckoutPage({ cart, onPlaceOrder }) {
   const paymentLock = useRef(false)
   const placing = stage !== 'idle'
   const subtotal = cart.reduce((total, item) => total + (item.product.salePrice || item.product.price) * item.quantity, 0)
-  const shipping = subtotal >= 3500 || subtotal === 0 ? 0 : 150
-  const tax = Math.round(subtotal * 0.05)
+  const shipping = subtotal > 0 ? SHIPPING_CHARGE : 0
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   useEffect(() => { const button = document.querySelector('.place-order'); if (button) button.dataset.status = placing ? 'processing' : 'idle' }, [placing])
   const buttonLabel = stage === 'creating' ? 'Creating secure order…' : stage === 'awaiting' ? 'Complete payment in Razorpay…' : stage === 'verifying' ? 'Verifying payment…' : 'Pay securely with Razorpay'
   const validateAndPlace = async () => {
     if (paymentLock.current || placing) return
-    if (!form.terms) return setError('Please accept the terms, final-sale policy, and privacy policy to continue.')
+    if (!form.terms) return setError('Please accept the terms, return policy, and privacy policy to continue.')
     if (!form.name || !form.email || !form.phone || !form.address || !form.city || !form.state || !form.postal) return setError('Please complete all required delivery details.')
     setError('')
     paymentLock.current = true
@@ -598,13 +591,13 @@ function CheckoutPage({ cart, onPlaceOrder }) {
     }
   }
   const submit = (event) => { event.preventDefault(); validateAndPlace() }
-  return <main className="checkout-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Checkout' }]} /><div className="checkout-heading"><span className="eyebrow">Secure Razorpay checkout</span><h1>Ready when you are.</h1><p>Your total is recalculated on our server before Razorpay opens. Scudo never receives or stores your card, UPI PIN, or banking credentials.</p></div>{!cart.length ? <EmptyState title="Your bag is empty" copy="Add something before checking out." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} /> : <form className="checkout-layout" onSubmit={submit}><div className="checkout-form"><FormSection title="Contact"><div className="form-grid"><Field label="Full name" value={form.name} onChange={(v) => update('name', v)} required autoComplete="name" /><Field label="Email address" type="email" value={form.email} onChange={(v) => update('email', v)} required autoComplete="email" /><Field label="Phone number" type="tel" value={form.phone} onChange={(v) => update('phone', v)} required autoComplete="tel" /></div></FormSection><FormSection title="Delivery address"><div className="form-grid"><Field label="Address" value={form.address} onChange={(v) => update('address', v)} required wide autoComplete="street-address" /><Field label="City" value={form.city} onChange={(v) => update('city', v)} required autoComplete="address-level2" /><Field label="State" value={form.state} onChange={(v) => update('state', v)} required autoComplete="address-level1" /><Field label="Country" value={form.country} onChange={(v) => update('country', v)} required autoComplete="country-name" /><Field label="Postal code" value={form.postal} onChange={(v) => update('postal', v)} required autoComplete="postal-code" /></div></FormSection><FormSection title="Payment"><div className="payment-note payment-note--secure"><span className="payment-badge">RAZORPAY</span><p><strong>Choose UPI, card, wallet, or net banking securely in Razorpay Checkout.</strong><br />Payment is accepted only after server-side signature and captured-status verification.</p></div></FormSection><label className="checkbox-row"><input type="checkbox" checked={form.terms} onChange={(e) => update('terms', e.target.checked)} /><span>I agree to the <Link to="/terms">terms and final-sale policy</Link> and <Link to="/privacy">privacy policy</Link>.</span></label>{error && <p className="form-error form-error--block" role="alert">{error}</p>}<button className="button button-dark place-order" type="submit" disabled={placing} aria-busy={placing}>{buttonLabel} <Icon name="arrow" size={16} /></button></div><OrderSummary subtotal={subtotal} shipping={shipping} tax={tax} checkoutLabel={buttonLabel} onCheckout={validateAndPlace} disabled={placing} /></form>}</div></main>
+  return <main className="checkout-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Checkout' }]} /><div className="checkout-heading"><span className="eyebrow">Secure Razorpay checkout</span><h1>Ready when you are.</h1><p>Your total is recalculated on our server before Razorpay opens. Scudo never receives or stores your card, UPI PIN, or banking credentials.</p></div>{!cart.length ? <EmptyState title="Your bag is empty" copy="Add something before checking out." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} /> : <form className="checkout-layout" onSubmit={submit}><div className="checkout-form"><FormSection title="Contact"><div className="form-grid"><Field label="Full name" value={form.name} onChange={(v) => update('name', v)} required autoComplete="name" /><Field label="Email address" type="email" value={form.email} onChange={(v) => update('email', v)} required autoComplete="email" /><Field label="Phone number" type="tel" value={form.phone} onChange={(v) => update('phone', v)} required autoComplete="tel" /></div></FormSection><FormSection title="Delivery address"><div className="form-grid"><Field label="Address" value={form.address} onChange={(v) => update('address', v)} required wide autoComplete="street-address" /><Field label="City" value={form.city} onChange={(v) => update('city', v)} required autoComplete="address-level2" /><Field label="State" value={form.state} onChange={(v) => update('state', v)} required autoComplete="address-level1" /><Field label="Country" value={form.country} onChange={(v) => update('country', v)} required autoComplete="country-name" /><Field label="Postal code" value={form.postal} onChange={(v) => update('postal', v)} required autoComplete="postal-code" /></div></FormSection><FormSection title="Payment"><div className="payment-note payment-note--secure"><span className="payment-badge">RAZORPAY</span><p><strong>Choose UPI, card, wallet, or net banking securely in Razorpay Checkout.</strong><br />Payment is accepted only after server-side signature and captured-status verification.</p></div></FormSection><label className="checkbox-row"><input type="checkbox" checked={form.terms} onChange={(e) => update('terms', e.target.checked)} /><span>I agree to the <Link to="/terms">terms</Link>, <Link to="/returns">return policy</Link>, and <Link to="/privacy">privacy policy</Link>.</span></label>{error && <p className="form-error form-error--block" role="alert">{error}</p>}<button className="button button-dark place-order" type="submit" disabled={placing} aria-busy={placing}>{buttonLabel} <Icon name="arrow" size={16} /></button></div><OrderSummary subtotal={subtotal} shipping={shipping} checkoutLabel={buttonLabel} onCheckout={validateAndPlace} disabled={placing} /></form>}</div></main>
 }
 
 function FormSection({ title, children }) { return <section className="form-section"><h2>{title}</h2>{children}</section> }
 function Field({ label, type = 'text', value, onChange, required, wide, autoComplete }) { return <label className={`field ${wide ? 'field--wide' : ''}`}><span>{label}{required && ' *'}</span><input type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} autoComplete={autoComplete} /></label> }
 
-function OrderConfirmation({ order }) { const paid = order?.payment?.status === 'Paid'; const processing = order?.payment?.status === 'Processing'; return <main className="confirmation-page"><div className="confirmation-card"><div className="confirmation-mark"><Icon name={paid ? 'check' : 'chevron'} size={26} /></div><span className="eyebrow">Order received / {order?.number || 'SC-PENDING'}</span><h1>{paid ? 'Payment confirmed.' : 'Payment received.'}</h1><p>{paid ? 'Razorpay verified and captured your payment securely.' : processing ? 'Your payment signature is verified and Razorpay is completing capture. Do not submit another payment for this order.' : 'Your order is being reviewed.'} All purchases are final and no returns are accepted.</p><div className="confirmation-meta"><div><span>Payment status</span><strong>{order?.payment?.status || 'Processing'}</strong></div><div><span>Estimated delivery</span><strong>2–4 business days after capture</strong></div><div><span>Ship to</span><strong>{order?.city || 'Your city'}, {order?.country || 'India'}</strong></div></div><Link to="/shop" className="button button-dark">Continue shopping <Icon name="arrow" size={16} /></Link></div></main> }
+function OrderConfirmation({ order }) { const paid = order?.payment?.status === 'Paid'; const processing = order?.payment?.status === 'Processing'; return <main className="confirmation-page"><div className="confirmation-card"><div className="confirmation-mark"><Icon name={paid ? 'check' : 'chevron'} size={26} /></div><span className="eyebrow">Order received / {order?.number || 'SC-PENDING'}</span><h1>{paid ? 'Payment confirmed.' : 'Payment received.'}</h1><p>{paid ? 'Razorpay verified and captured your payment securely.' : processing ? 'Your payment signature is verified and Razorpay is completing capture. Do not submit another payment for this order.' : 'Your order is being reviewed.'} Report verified damaged, defective, incorrect, or missing-item issues within 48 hours of delivery.</p><div className="confirmation-meta"><div><span>Payment status</span><strong>{order?.payment?.status || 'Processing'}</strong></div><div><span>Estimated delivery</span><strong>4–15 business days after capture</strong></div><div><span>Ship to</span><strong>{order?.city || 'Your city'}, {order?.country || 'India'}</strong></div></div><Link to="/shop" className="button button-dark">Continue shopping <Icon name="arrow" size={16} /></Link></div></main> }
 
 function WishlistPage({ wishlist, onToggleWishlist, onQuickAdd }) { const wished = products.filter((product) => wishlist.includes(product.id)); return <main className="shop-page wishlist-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Wishlist' }]} /><div className="shop-heading"><div><span className="eyebrow">Saved for later</span><h1>Your wishlist</h1></div><p>{wished.length ? `${wished.length} pieces saved.` : 'Keep the good ones close.'}</p></div>{wished.length ? <div className="product-grid product-grid--four">{wished.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Your list is quiet" copy="Tap the heart on a piece to save it for later." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} />}</div></main> }
 
@@ -617,23 +610,461 @@ function ContactChannels() {
   </section>
 }
 
+function ContactPage() {
+  const [form, setForm] = useState({ name: '', contact: '', order: '', topic: 'General enquiry', message: '' })
+  const [opening, setOpening] = useState(false)
+  const update = (field, value) => setForm((current) => ({ ...current, [field]: value }))
+  const submit = (event) => {
+    event.preventDefault()
+    if (opening) return
+    const lines = [
+      'Hello SCUDO Clothings,',
+      '',
+      `Name: ${form.name.trim()}`,
+      `Contact: ${form.contact.trim()}`,
+      `Order number: ${form.order.trim() || 'Not provided'}`,
+      `Topic: ${form.topic}`,
+      '',
+      'Message:',
+      form.message.trim()
+    ]
+    const whatsappUrl = `https://wa.me/918767416351?text=${encodeURIComponent(lines.join('\n'))}`
+    setOpening(true)
+    window.setTimeout(() => window.location.assign(whatsappUrl), 220)
+  }
+
+  return <main className="info-page contact-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Contact' }]} /><div className="info-hero contact-hero"><span className="eyebrow">Say hello / Direct message</span><h1>Over to<br /><em>you.</em></h1><p>Questions about a product, size, order, payment, or return? Complete the form and continue the conversation directly on WhatsApp.</p></div><section className="contact-direct"><div className="contact-direct__intro"><span className="eyebrow">WhatsApp support</span><h2>Tell us what<br />you need.</h2><p>Your details stay in your browser until you press send. We will create a pre-filled message and redirect you to WhatsApp.</p><a href="https://wa.me/918767416351" target="_blank" rel="noreferrer"><span>+91 87674 16351</span><Icon name="arrow" size={16} /></a><small>Monday–Friday / 10:00–18:00 IST</small></div><form className="contact-message-form" onSubmit={submit}><div className="contact-form-heading"><span className="eyebrow">Direct message</span><strong>Fields marked * are required.</strong></div><div className="contact-form-grid"><label className="contact-field"><span>Full name *</span><input type="text" value={form.name} onChange={(event) => update('name', event.target.value)} autoComplete="name" required /></label><label className="contact-field"><span>Phone or email *</span><input type="text" value={form.contact} onChange={(event) => update('contact', event.target.value)} autoComplete="email" required /></label><label className="contact-field"><span>Order number</span><input type="text" value={form.order} onChange={(event) => update('order', event.target.value)} placeholder="Optional" /></label><label className="contact-field"><span>Topic *</span><select value={form.topic} onChange={(event) => update('topic', event.target.value)} required><option>General enquiry</option><option>Product or size</option><option>Existing order</option><option>Return or replacement</option><option>Payment</option><option>Partnership</option></select></label><label className="contact-field contact-field--wide"><span>Message *</span><textarea value={form.message} onChange={(event) => update('message', event.target.value)} rows="6" required placeholder="How can we help?" /></label></div><button className="button button-dark contact-send" type="submit" disabled={opening} aria-busy={opening}>{opening ? 'Opening WhatsApp…' : 'Send on WhatsApp'} <Icon name={opening ? 'check' : 'arrow'} size={16} /></button><p className="contact-privacy-note">By continuing, WhatsApp will process the message according to its own privacy policy.</p></form></section><ContactChannels /></div></main>
+}
+
+function TermsPage() {
+  const clauses = [
+    {
+      number: '05',
+      title: 'Shipping timelines & delivery',
+      paragraphs: [
+        'Shipping timelines and delivery dates may vary depending on the delivery location, courier partner, weather conditions, public holidays, logistics delays, or circumstances beyond our control.',
+        'SCUDO Clothings will not be responsible for delays caused by third-party courier services, incorrect addresses, customer unavailability, or unforeseen delivery issues.'
+      ]
+    },
+    {
+      number: '06',
+      title: 'Returns, exchanges & refunds',
+      paragraphs: [
+        'Returns and exchanges are not accepted for change of mind, incorrect customer-selected size, personal preference, or when the customer no longer wants the product.',
+        'Verified damaged, defective, incorrect, wrong-size, or missing-item claims may qualify for replacement or refund when reported within 48 hours of delivery and approved under our Return, Exchange & Refund Policy.'
+      ]
+    },
+    {
+      number: '07',
+      title: 'Intellectual property',
+      paragraphs: [
+        'All content on this website, including the SCUDO Clothings name, logo, tagline, product designs, graphics, images, videos, text, layout, and branding elements, is the property of SCUDO Clothings.',
+        'No content from this website may be copied, reproduced, modified, distributed, uploaded, sold, or used for commercial purposes without written permission from SCUDO Clothings.'
+      ]
+    },
+    {
+      number: '08',
+      title: 'User responsibility',
+      paragraphs: [
+        'Users must not misuse the website by attempting to hack, damage, overload, copy, or interfere with its normal functioning. Any fraudulent activity, false information, unauthorized access, or misuse of the website may result in order cancellation, account restriction, or legal action.'
+      ]
+    },
+    {
+      number: '09',
+      title: 'Privacy',
+      paragraphs: [
+        'By using our website, you agree that your personal information may be collected and used according to our Privacy Policy. This information may be used for order processing, delivery, customer support, communication, marketing, and service improvement.'
+      ]
+    },
+    {
+      number: '10',
+      title: 'Limitation of liability',
+      paragraphs: [
+        'SCUDO Clothings will not be responsible for any indirect, incidental, special, or consequential loss arising from the use of our website, delayed delivery, product misuse, incorrect size selection, payment gateway issues, or third-party service problems.',
+        'Our total liability, if any, shall be limited to the amount paid by the customer for the specific product or order.'
+      ]
+    },
+    {
+      number: '11',
+      title: 'Changes to terms',
+      paragraphs: [
+        'SCUDO Clothings reserves the right to update or modify these Terms & Conditions at any time. Any changes will be posted on this page, and continued use of the website after such changes means you accept the updated terms.'
+      ]
+    },
+    {
+      number: '12',
+      title: 'Governing law',
+      paragraphs: [
+        'These Terms & Conditions shall be governed by the laws of India. Any dispute related to the use of this website, purchases, services, or policies shall be subject to the jurisdiction of the appropriate courts in Maharashtra, India.'
+      ]
+    }
+  ]
+
+  return <main className="info-page terms-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Terms' }]} /><div className="info-hero terms-hero"><span className="eyebrow">Legal / Terms</span><h1>The ground<br /><em>rules.</em></h1><p>These Terms &amp; Conditions explain the rules for using the SCUDO Clothings website, placing orders, and receiving our services.</p></div><div className="terms-intro"><div><span className="eyebrow">Orders</span><p>An order is confirmed after the configured payment provider accepts it and the order details are verified. A fixed ₹50 shipping charge applies to every order.</p></div><div><span className="eyebrow">Returns &amp; support</span><p>Change-of-mind and customer-selected-size returns are not accepted. Verified product or delivery issues must be reported within 48 hours under our <Link to="/returns">Return Policy</Link>.</p></div></div><div className="terms-list">{clauses.map((clause) => <section className="terms-clause" key={clause.number}><div className="terms-clause__heading"><span>{clause.number}</span><h2>{clause.title}</h2></div><div className="terms-clause__copy">{clause.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div></section>)}</div><p className="terms-acceptance">By using the SCUDO Clothings website, you acknowledge that you have read, understood, and agreed to these Terms &amp; Conditions.</p></div></main>
+}
+
+function PrivacyPage() {
+  const clauses = [
+    {
+      number: '01',
+      title: 'Information we collect',
+      paragraphs: [
+        'When you use our website or place an order, we may collect personal information such as your name, email address, phone number, billing address, shipping address, payment transaction details, order history, and communication details.',
+        'We may also collect non-personal information such as browser type, device type, IP address, location data, pages visited, time spent on the website, referral source, and website usage behaviour.'
+      ]
+    },
+    {
+      number: '02',
+      title: 'How we use your information',
+      paragraphs: [
+        'SCUDO Clothings uses personal information only where it is reasonably necessary to operate, protect, and improve our store and services.'
+      ],
+      bullets: [
+        'Process and deliver your orders',
+        'Confirm payments and manage transactions',
+        'Provide customer support',
+        'Send order updates, delivery updates, and important notifications',
+        'Handle order concerns, payment failures, delivery issues, and remedies required by law',
+        'Improve our website, products, and services',
+        'Personalise your shopping experience',
+        'Send promotional messages, offers, and marketing communication when you have opted in',
+        'Prevent fraud, misuse, unauthorised access, or illegal activities',
+        'Comply with legal, tax, accounting, and regulatory requirements'
+      ]
+    },
+    {
+      number: '03',
+      title: 'Payment information',
+      paragraphs: [
+        'Payments made on our website may be processed through secure third-party payment gateways. SCUDO Clothings does not directly store your complete card details, UPI PIN, net banking passwords, or other sensitive payment credentials.',
+        'Your payment information is handled by the payment gateway provider according to its own security and privacy policies.'
+      ]
+    },
+    {
+      number: '04',
+      title: 'Cookies & tracking technologies',
+      paragraphs: [
+        'Our website may use cookies and similar tracking technologies to improve your browsing experience, remember your preferences, analyse website traffic, and show relevant content or advertisements.',
+        'You can choose to disable cookies through your browser settings. However, disabling cookies may affect some features and functionality of the website.'
+      ]
+    },
+    {
+      number: '05',
+      title: 'Sharing of information',
+      paragraphs: [
+        'SCUDO Clothings does not sell or rent your personal information to third parties. We may share information with trusted service providers only when necessary to operate our store and fulfil our obligations.',
+        'These third parties are expected to use your information only for the purpose of providing their services to SCUDO Clothings.'
+      ],
+      bullets: [
+        'Courier and logistics partners',
+        'Payment gateway providers',
+        'Website hosting and technology service providers',
+        'Marketing and advertising platforms',
+        'Customer support tools',
+        'Analytics service providers',
+        'Legal, tax, or regulatory authorities when required by law'
+      ]
+    },
+    {
+      number: '06',
+      title: 'Marketing communication',
+      paragraphs: [
+        'If you subscribe to our newsletter, offers, WhatsApp updates, SMS alerts, or email communication, we may use your contact details to send promotional messages, new collection updates, discount offers, and brand announcements.',
+        'You may opt out of marketing communication at any time by using the unsubscribe option or contacting us directly.'
+      ]
+    },
+    {
+      number: '07',
+      title: 'Data security',
+      paragraphs: [
+        'We take reasonable security measures to protect your personal information from unauthorised access, misuse, loss, alteration, or disclosure.',
+        'However, no method of online transmission or electronic storage is completely secure. While we try our best to protect your information, SCUDO Clothings cannot guarantee absolute security.'
+      ]
+    },
+    {
+      number: '08',
+      title: 'Data retention',
+      paragraphs: [
+        'We may retain your personal information for as long as necessary to process orders, provide services, resolve disputes, prevent fraud, comply with legal obligations, and maintain business records.',
+        'When your information is no longer required, we may delete, anonymise, or securely store it according to applicable laws and business requirements.'
+      ]
+    },
+    {
+      number: '09',
+      title: 'Your rights',
+      paragraphs: [
+        'Depending on applicable laws, you may have the following rights regarding your personal information.'
+      ],
+      bullets: [
+        'Access the personal information we hold about you',
+        'Correct inaccurate or incomplete information',
+        'Request deletion of your personal data',
+        'Withdraw consent for marketing communication',
+        'Request restriction of certain data processing',
+        'Contact us regarding privacy-related concerns'
+      ]
+    },
+    {
+      number: '10',
+      title: 'Third-party links',
+      paragraphs: [
+        'Our website may contain links to third-party websites, payment gateways, social media platforms, or external services. SCUDO Clothings is not responsible for the privacy practices, content, security, or policies of these third-party websites.',
+        'We recommend that you read the privacy policies of any external websites you visit.'
+      ]
+    },
+    {
+      number: '11',
+      title: 'Children’s privacy',
+      paragraphs: [
+        'Our website is intended for general users and is not specifically directed toward children under the age of 13. We do not knowingly collect personal information from children without parental or guardian consent.',
+        'If you believe that a child has provided personal information to us, please contact us so we can take appropriate action.'
+      ]
+    },
+    {
+      number: '12',
+      title: 'Legal compliance',
+      paragraphs: [
+        'We may disclose your personal information if required by law, court order, government request, regulatory authority, or to protect the rights, safety, and security of SCUDO Clothings, our customers, or the public.'
+      ]
+    },
+    {
+      number: '13',
+      title: 'Changes to this policy',
+      paragraphs: [
+        'SCUDO Clothings reserves the right to update or modify this Privacy Policy at any time. Any changes will be posted on this page with the updated date.',
+        'Your continued use of the website after changes are posted means you accept the updated Privacy Policy.'
+      ]
+    },
+    {
+      number: '14',
+      title: 'Contact us',
+      paragraphs: [
+        'If you have any questions, concerns, or requests regarding this Privacy Policy or the handling of your personal information, contact us at scudoclothing@gmail.com.'
+      ]
+    }
+  ]
+
+  return <main className="info-page terms-page privacy-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Privacy' }]} /><div className="info-hero terms-hero"><span className="eyebrow">Legal / Privacy</span><h1>Privacy<br /><em>Policy.</em></h1><p>Welcome to SCUDO Clothings. Your privacy is important to us. This Privacy Policy explains how we collect, use, store, and protect your personal information when you visit our website, place an order, contact us, or use any of our services.</p><span className="privacy-updated">Last updated: 29 July 2026</span></div><div className="terms-intro"><div><span className="eyebrow">Our commitment</span><p>We use your information to operate the store, fulfil orders, provide support, and improve your experience. We do not sell or rent your personal information.</p></div><div><span className="eyebrow">Your control</span><p>Contact <a href="mailto:scudoclothing@gmail.com">scudoclothing@gmail.com</a> to ask about access, correction, deletion, or marketing preferences.</p></div></div><div className="terms-list">{clauses.map((clause) => <section className="terms-clause" key={clause.number}><div className="terms-clause__heading"><span>{clause.number}</span><h2>{clause.title}</h2></div><div className="terms-clause__copy">{clause.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{clause.bullets && <ul>{clause.bullets.map((item) => <li key={item}>{item}</li>)}</ul>}</div></section>)}</div><p className="terms-acceptance">By using the SCUDO Clothings website, you acknowledge that you have read, understood, and agreed to this Privacy Policy.</p></div></main>
+}
+
+function ReturnPolicyPage() {
+  const clauses = [
+    {
+      number: '01',
+      title: 'General return policy',
+      paragraphs: [
+        'SCUDO Clothings does not accept returns or exchanges for change of mind, incorrect size selection, personal preference, or when the customer no longer wants the product after receiving it.',
+        'Customers are requested to carefully check the product description, size chart, specifications, and other details before placing an order.'
+      ]
+    },
+    {
+      number: '02',
+      title: 'Damaged, defective or incorrect products',
+      paragraphs: [
+        'A replacement or refund may be provided for an eligible issue reported to SCUDO Clothings within 48 hours of delivery. Requests made after 48 hours may not be accepted.'
+      ],
+      bullets: [
+        'You receive a damaged product',
+        'You receive a defective product',
+        'You receive a product different from what you ordered',
+        'The delivered size differs from the size in your confirmed order',
+        'An item is missing from your order'
+      ]
+    },
+    {
+      number: '03',
+      title: 'Unboxing video requirement',
+      paragraphs: [
+        'To help us verify damaged, incorrect, missing, or defective product claims, customers are strongly requested to record a clear, continuous unboxing video from before opening the package until the complete product is visible.',
+        'SCUDO Clothings may request photographs, videos, packaging details, order details, or other reasonable evidence before approving a claim.'
+      ],
+      bullets: [
+        'The sealed package',
+        'The shipping label',
+        'Opening of the package',
+        'The product received',
+        'Any damage, defect, incorrect item, or missing product'
+      ]
+    },
+    {
+      number: '04',
+      title: 'Conditions for replacement',
+      paragraphs: [
+        'Products that have been used, washed, altered, damaged after delivery, or returned without their original tags may not be eligible for replacement.'
+      ],
+      bullets: [
+        'Unused and unwashed',
+        'Unworn, except for reasonable inspection or size checking',
+        'Free from stains, perfume, deodorant, or other marks',
+        'Returned with original tags and packaging'
+      ]
+    },
+    {
+      number: '05',
+      title: 'Size issues',
+      paragraphs: [
+        'Please check the size chart carefully before placing your order. We do not normally provide returns, refunds, or exchanges when the customer selects the wrong size while ordering.',
+        'If SCUDO Clothings sends a size different from the size confirmed in your order, you may request a replacement within the 48-hour claim window.'
+      ]
+    },
+    {
+      number: '06',
+      title: 'Refunds',
+      paragraphs: [
+        'Where a genuine issue is verified, SCUDO Clothings will normally first offer a replacement. If a replacement cannot reasonably be provided because the product or required size is unavailable, we may offer a refund.',
+        'Approved refunds will be processed to the original payment method or through another mutually agreed payment method. The time taken for the amount to appear may depend on the bank, UPI provider, card issuer, or payment gateway.'
+      ]
+    },
+    {
+      number: '07',
+      title: 'Order cancellation',
+      paragraphs: [
+        'Customers should contact SCUDO Clothings as soon as possible if they wish to cancel an order. An order may be cancelled only if it has not yet been shipped or dispatched. Once shipped, cancellation may not be possible.',
+        'SCUDO Clothings may cancel an order because of product unavailability, payment issues, incorrect pricing, suspected fraudulent activity, or other unavoidable circumstances. If payment has been successfully received for an order cancelled by SCUDO Clothings, the applicable amount will be refunded.'
+      ]
+    },
+    {
+      number: '08',
+      title: 'Delivery refusal',
+      paragraphs: [
+        'Customers are requested not to refuse prepaid orders without contacting SCUDO Clothings. Repeated refusal of orders, fraudulent orders, or misuse of our return or replacement process may result in future orders being restricted or cancelled.'
+      ]
+    },
+    {
+      number: '09',
+      title: 'How to raise a request',
+      paragraphs: [
+        'For an eligible replacement or refund request, email scudoclothings@gmail.com. Our team will review the request and provide further instructions.'
+      ],
+      bullets: [
+        'Order number',
+        'Customer name',
+        'Registered phone number or email',
+        'Description of the issue',
+        'Clear photographs of the product',
+        'Unboxing video, where applicable'
+      ]
+    },
+    {
+      number: '10',
+      title: 'Policy abuse',
+      paragraphs: [
+        'SCUDO Clothings reserves the right to reject claims involving fraudulent activity, manipulated evidence, intentional product damage, repeated misuse of the policy, or claims that do not meet the conditions stated above.'
+      ]
+    },
+    {
+      number: '11',
+      title: 'Policy updates',
+      paragraphs: [
+        'SCUDO Clothings may update this Return, Exchange & Refund Policy when required. Any changes will be published on this page with the updated date.'
+      ]
+    }
+  ]
+
+  return <main className="info-page terms-page return-policy-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Return policy' }]} /><div className="info-hero terms-hero"><span className="eyebrow">Customer care / Returns</span><h1>Return, exchange<br /><em>&amp; refund.</em></h1><p>At SCUDO Clothings, we carefully check our products before dispatch to help ensure that customers receive their orders in good condition. Please read this policy carefully before placing an order.</p><span className="privacy-updated">Last updated: 3 August 2026</span></div><div className="terms-intro"><div><span className="eyebrow">48-hour claim window</span><p>Report damaged, defective, incorrect, wrong-size, or missing-item issues within 48 hours of delivery. Requests made later may not be accepted.</p></div><div><span className="eyebrow">How to contact us</span><p>Email <a href="mailto:scudoclothings@gmail.com">scudoclothings@gmail.com</a> with your order number, photos, and unboxing video where applicable.</p></div></div><div className="terms-list">{clauses.map((clause) => <section className="terms-clause" key={clause.number}><div className="terms-clause__heading"><span>{clause.number}</span><h2>{clause.title}</h2></div><div className="terms-clause__copy">{clause.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}{clause.bullets && <ul>{clause.bullets.map((item) => <li key={item}>{item}</li>)}</ul>}</div></section>)}</div><p className="terms-acceptance">By placing an order with SCUDO Clothings, you acknowledge that you have read and understood this Return, Exchange &amp; Refund Policy.</p></div></main>
+}
+
 function StorePolicyPage({ type }) {
-  const isTerms = type === 'terms'
-  const sections = isTerms
-    ? [
-        ['Orders', 'An order is confirmed after the configured payment provider accepts it and the order details are verified.'],
-        ['Final sale & support', 'All purchases are final and are not eligible for return. Contact scudoclothing@gmail.com for delivery or order support.']
+  if (type === 'terms') return <TermsPage />
+  const sections = [
+    ['Shipping', 'A fixed ₹50 shipping charge applies to every order across India. Orders ship in 4–15 business days, and tracking details are sent once your order leaves us.'],
+    ['Returns & replacements', 'Change-of-mind and customer-selected-size returns are not accepted. Verified damaged, defective, incorrect, or missing-item issues must be reported within 48 hours of delivery.']
+  ]
+  return <main className="info-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Shipping & returns' }]} /><div className="info-hero"><span className="eyebrow">Customer care</span><h1>Shipping &amp;<br /><em>returns.</em></h1><p>Please review your order, confirm your size, and understand the 48-hour verified-issue claim window before completing your purchase.</p></div><div className="info-sections">{sections.map(([title, copy]) => <section key={title}><span className="eyebrow">{title}</span><p>{copy}</p></section>)}</div><Link className="button button-dark" to="/returns">Read the return policy <Icon name="arrow" size={16} /></Link></div></main>
+}
+
+function AboutPage() {
+  const story = [
+    {
+      label: 'About us',
+      paragraphs: [
+        'Founded in 2026 in Washim, Maharashtra, Scudo Clothings was created with one bold goal: to become the number one name in everyday fashion, loved by Gen Z and worn with pride across the world. From day one, we\'ve set out to launch as a global brand, delivering top-quality products, service, and experience to every customer we serve.'
       ]
-    : [
-        ['Shipping', 'Orders ship across India in 2–4 business days. You’ll receive tracking details once your order leaves us. Shipping costs are calculated at checkout.'],
-        ['Final-sale policy', 'All purchases are final. We do not accept returns. Please review the product details and size guide carefully before ordering.']
+    },
+    {
+      label: 'Our first phase',
+      paragraphs: [
+        'Our journey begins with the game we love. In our first phase, we bring passionate football and sports fans the jerseys that let them wear their colours and cheer for their teams—from football and cricket to every kind of sports jersey. With signature favourites like our France and Portugal jerseys, crafted in breathable, high-performance fabric, we make it easy for fans aged 12 to 30 to represent the teams and players they live for.'
       ]
-  return <main className="info-page"><div className="page-shell"><Breadcrumbs items={[{ label: isTerms ? 'Terms' : 'Shipping & final sale' }]} /><div className="info-hero"><span className="eyebrow">{isTerms ? 'Legal / Terms' : 'Customer care'}</span><h1>{isTerms ? <>The ground<br /><em>rules.</em></> : <>Shipping &<br /><em>final sale.</em></>}</h1><p>{isTerms ? 'These store terms explain the order and final-sale conditions.' : 'Please review your order and confirm your size carefully before completing your purchase.'}</p></div><div className="info-sections">{sections.map(([title, copy]) => <section key={title}><span className="eyebrow">{title}</span><p>{copy}</p></section>)}</div></div></main>
+    },
+    {
+      label: 'What comes next',
+      paragraphs: [
+        'But this is only the beginning. Selling jerseys is our starting move—the foundation we\'re building on. As we grow and our revenue rises, our vision is to launch our very own customised clothing line: original t-shirts, pants, and everyday apparel designed entirely by us.',
+        'When that day comes, we won\'t just sell you clothes—we\'ll show you exactly how they\'re made. From the material we choose to how, when, and in what way each piece is crafted, everything will be explained openly on our website, because we believe our customers deserve total transparency.'
+      ]
+    },
+    {
+      label: 'What makes Scudo different',
+      paragraphs: [
+        'What makes Scudo different is simple: this isn\'t just a brand—it\'s armour for everyday, designed by the best for the best. We treat every customer like family, and we pour that care into everything we do. Quality, passion, and authenticity are at the heart of every product, and we\'re committed to giving you not just great clothing, but a shopping experience that feels genuine and personal.'
+      ]
+    },
+    {
+      label: 'Our promise',
+      paragraphs: [
+        'As we grow, we\'ll keep evolving—bringing new ideas, new marketing, and new strategies to expand the Scudo family across the globe. Our promise stays the same: to deliver premium products, honest craftsmanship, and an experience worthy of the people who wear us.',
+        'Thank you for being part of the Scudo Clothings journey. This is only the start—and we can\'t wait to grow with you.'
+      ]
+    }
+  ]
+
+  return (
+    <main className="info-page about-page">
+      <div className="page-shell">
+        <Breadcrumbs items={[{ label: 'About' }]} />
+        <div className="info-hero about-hero">
+          <span className="eyebrow">The SCUDO team</span>
+          <h1>How it <br /><em>started.</em></h1>
+          <p>At SCUDO CLOTHINGS, we&apos;re not just building a brand—we&apos;re building armour for everyday.</p>
+        </div>
+        <div className="about-story">
+          {story.map((section, index) => (
+            <section key={section.label} className="about-story__section">
+              <div className="about-story__label">
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                <h2>{section.label}</h2>
+              </div>
+              <div className="about-story__copy">
+                {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+              </div>
+            </section>
+          ))}
+        </div>
+        <p className="about-welcome">Welcome to SCUDO CLOTHINGS—<em>armour for everyday.</em></p>
+        <section className="about-company">
+          <div>
+            <span className="eyebrow">Registered company</span>
+            <h2>SCUDO APPARELS<br />PRIVATE LIMITED</h2>
+          </div>
+          <div className="about-company__details">
+            <div>
+              <span>Registered Office Address</span>
+              <address>Kharatkar Gali No. 1, Near Ganesh Medical,<br />Rajni Chowk, Shukrawar Peth,<br />Washim, Maharashtra, India – 444505</address>
+            </div>
+            <div>
+              <span>Grievance Contact details</span>
+              <dl className="about-team-list">
+                <div><dt>Founder</dt><dd>Saksham Ghope</dd></div>
+                <div><dt>Co-Founder</dt><dd>Samarth Dhekane</dd></div>
+                <div><dt>Management team</dt><dd>Rahul Yadav<br />Shree Lokhande<br />Pavan Bhosale</dd></div>
+              </dl>
+              <a className="about-company__email" href="mailto:scudoclothing@gmail.com">scudoclothing@gmail.com</a>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  )
 }
 
 function InfoPage({ type }) {
   if (type === 'shipping-final-sale' || type === 'terms') return <StorePolicyPage type={type} />
-  const content = { about: { eyebrow: 'The Scudo idea', title: <>Not a kit.<br /><em>A point of view.</em></>, intro: 'Scudo Clothing is a football-inspired streetwear label for people who see the game as more than a scoreline.', sections: [['The 90 minutes and everything after', 'We make pieces for the full day around the game — the walk to the stadium, the first coffee, the late train home, and every ordinary moment in between.'], ['Our first team sheet', 'Scudo starts with small, considered drops: relaxed shapes, familiar colours, and details that feel lived-in from the first wear. The goal is simple — build an everyday rotation that carries a little matchday energy.']] }, 'size-guide': { eyebrow: 'Find your fit', title: <>The right<br /><em>formation.</em></>, intro: 'Our fits are designed with room to move. Take your usual size for an easy fit, or size down for a closer silhouette.', sections: [['T-shirts & jerseys', 'Measure around the chest at the fullest point. Compare with the chart below. Jerseys are designed to feel relaxed.'], ['Size guide', 'S — 36–38 in chest · M — 39–41 in chest · L — 42–44 in chest · XL — 45–47 in chest · XXL — 48–50 in chest']] }, 'shipping-final-sale': { eyebrow: 'Customer care', title: <>Shipping &<br /><em>final sale.</em></>, intro: 'Please review your order and confirm your size carefully before completing your purchase.', sections: [['Shipping', 'Orders ship across India in 2–4 business days. You’ll receive tracking details once your order leaves us. Shipping costs are calculated at checkout.'], ['Final-sale policy', 'All purchases are final. We do not accept returns. Please review the product details and size guide carefully before ordering.']] }, contact: { eyebrow: 'Say hello', title: <>Over to<br /><em>you.</em></>, intro: 'Questions about a piece, a fit, or a future drop? The line is open.', sections: [['Email', 'scudoclothing@gmail.com'], ['Hours', 'Monday–Friday, 10:00–18:00 IST. We aim to reply within two business days.']] }, privacy: { eyebrow: 'Legal / Privacy', title: <>Your data,<br /><em>handled lightly.</em></>, intro: 'This starter policy page is intentionally concise and should be reviewed with your legal advisor before launch.', sections: [['What we collect', 'We collect the details needed to process an order, provide support, and send updates when you choose to subscribe. We do not store raw card information.'], ['Your choices', 'Email scudoclothing@gmail.com to ask about access, correction, or deletion of personal information.']] }, terms: { eyebrow: 'Legal / Terms', title: <>The ground<br /><em>rules.</em></>, intro: 'These store terms explain the order and final-sale conditions.', sections: [['Orders', 'An order is confirmed after the configured payment provider accepts it and the order details are verified.'], ['Final sale & support', 'All purchases are final and are not eligible for return. Contact scudoclothing@gmail.com for delivery or order support.']] } }[type]
+  if (type === 'about') return <AboutPage />
+  if (type === 'privacy') return <PrivacyPage />
+  if (type === 'returns') return <ReturnPolicyPage />
+  if (type === 'contact') return <ContactPage />
+  const content = { 'size-guide': { eyebrow: 'Find your fit', title: <>The right<br /><em>formation.</em></>, intro: 'Our fits are designed with room to move. Take your usual size for an easy fit, or size down for a closer silhouette.', sections: [['T-shirts & jerseys', 'Measure around the chest at the fullest point. Compare with the chart below. Jerseys are designed to feel relaxed.'], ['Size guide', 'S — 36–38 in chest · M — 39–41 in chest · L — 42–44 in chest · XL — 45–47 in chest · XXL — 48–50 in chest']] } }[type]
   return <main className="info-page"><div className="page-shell"><Breadcrumbs items={[{ label: type === 'about' ? 'About' : type === 'size-guide' ? 'Size guide' : type === 'shipping-final-sale' ? 'Shipping & final sale' : 'Contact' }]} /><div className="info-hero"><span className="eyebrow">{content.eyebrow}</span><h1>{content.title}</h1><p>{content.intro}</p></div><div className="info-sections">{content.sections.map(([title, copy]) => <section key={title}><span className="eyebrow">{title}</span><p>{copy}</p></section>)}</div>{type === 'contact' && <ContactChannels />}{type === 'size-guide' && <div className="size-table"><div className="size-table-head"><span>Size</span><span>Chest</span><span>Length</span></div>{[['S','36–38 in','27 in'],['M','39–41 in','28 in'],['L','42–44 in','29 in'],['XL','45–47 in','30 in'],['XXL','48–50 in','31 in']].map((row) => <div className="size-table-row" key={row[0]}>{row.map((value) => <span key={value}>{value}</span>)}</div>)}</div>} {type === 'contact' && <a className="button button-dark" href="mailto:scudoclothing@gmail.com">Email the team <Icon name="arrow" size={16} /></a>}</div></main>
 }
 
@@ -696,7 +1127,77 @@ function SettingsPage({ account }) {
   return <main className="settings-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Settings' }]} /><div className="account-page-heading"><span className="eyebrow">Account preferences</span><h1>Settings.</h1><p>Keep your Scudo details current.</p></div><form className="settings-card" onSubmit={(event) => { event.preventDefault(); setSaved(true); window.setTimeout(() => setSaved(false), 1800) }}><label className="field"><span>Full name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label><label className="field"><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><div className="settings-card__footer"><button className="button button-dark" type="submit">{saved ? 'Saved' : 'Save changes'} <Icon name={saved ? 'check' : 'arrow'} size={16} /></button></div></form></div></main>
 }
 
-function AdminPage() { const [authed, setAuthed] = usePersistedState('scudo-admin-auth', false); const [announcement, setAnnouncement] = usePersistedState('scudo-announcement', 'DROP 01 — THE FIRST XI'); const [saved, setSaved] = useState(false); if (!authed) return <main className="account-page"><div className="account-card"><span className="eyebrow">Store admin</span><h1>Keep the team sheet current.</h1><p>Protected demo foundation for catalog, inventory, content, and order operations.</p><button className="button button-dark" onClick={() => setAuthed(true)}>Enter demo dashboard <Icon name="arrow" size={16} /></button><p className="demo-note">Demo access only. Replace this gate with your auth provider before launch.</p></div></main>; return <main className="admin-page"><div className="page-shell"><div className="admin-header"><div><span className="eyebrow">Scudo / Store admin</span><h1>Good morning, manager.</h1></div><button className="button button-ghost" onClick={() => setAuthed(false)}>Log out</button></div><div className="admin-stats">{[['Live products', products.filter((p) => !p.isSoldOut).length, 'catalog'], ['Inventory value', formatMoney(products.reduce((sum, p) => sum + p.price * p.inventory, 0)), 'at retail'], ['Low stock', products.filter((p) => p.inventory > 0 && p.inventory < 8).length, 'needs a look'], ['Payment gateway', 'Razorpay', 'server verified']].map(([label, value, note]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div><div className="admin-grid"><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Content</span><h2>Announcement bar</h2></div><span className="status-pill">Live</span></div><p>Edit the message shown above the storefront header.</p><div className="admin-edit-row"><input value={announcement} onChange={(e) => { setAnnouncement(e.target.value); setSaved(false) }} /><button className="button button-dark" onClick={() => setSaved(true)}>Save</button></div>{saved && <span className="form-success">Saved to demo store.</span>}</section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Catalog</span><h2>Products</h2></div><Link to="/shop" className="text-link">View storefront <Icon name="arrow" size={14} /></Link></div><div className="admin-products">{products.map((product) => <div key={product.id}><img src={product.images[0]} alt="" /><span>{product.name}<small>{product.sku}</small></span><strong className={product.inventory < 8 ? 'low-stock' : ''}>{product.isSoldOut ? 'Sold out' : `${product.inventory} in stock`}</strong><button className="icon-button" aria-label={`Edit ${product.name}`}><Icon name="chevron" size={15} /></button></div>)}</div></section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Operations</span><h2>Next connections</h2></div></div><div className="admin-checklist">{['Product image storage', 'Razorpay secure payments', 'Supabase authentication', 'Payment capture webhooks'].map((item, i) => <div key={item}><span className={i !== 2 ? 'check is-done' : 'check'}>{i !== 2 && <Icon name="check" size={13} />}</span>{item}<span className="connection-status">{i === 2 ? 'Not configured' : i === 0 ? 'Ready for upload' : 'Configured in code'}</span></div>)}</div></section></div></div></main> }
+function AdminOrderEditor({ order, onSave }) {
+  const [fulfilmentStatus, setFulfilmentStatus] = useState(order.fulfilmentStatus || 'unfulfilled')
+  const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || '')
+  const [state, setState] = useState('idle')
+
+  useEffect(() => {
+    setFulfilmentStatus(order.fulfilmentStatus || 'unfulfilled')
+    setTrackingNumber(order.trackingNumber || '')
+    setState('idle')
+  }, [order.orderId, order.fulfilmentStatus, order.trackingNumber])
+
+  const submit = async (event) => {
+    event.preventDefault()
+    setState('saving')
+    try {
+      await onSave({ orderId: order.orderId, fulfilmentStatus, trackingNumber })
+      setState('saved')
+      window.setTimeout(() => setState('idle'), 1800)
+    } catch {
+      setState('error')
+    }
+  }
+
+  return <article className="admin-order-card"><div className="admin-order-card__head"><div><span className="eyebrow">{order.receipt || order.orderId}</span><h3>{order.customer.name || 'Customer'}</h3></div><span className={`status-pill status-pill--${order.paymentStatus}`}>{order.paymentStatus}</span></div><div className="admin-order-card__meta"><span>{new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN')}</span><span>{order.customer.email}</span><strong>{formatMoney((order.amount || 0) / 100)}</strong></div><div className="admin-order-card__items">{order.lineItems.map((item) => <span key={`${order.orderId}-${item.productId}-${item.size}`}>{item.quantity} × {item.name} / {item.size}</span>)}</div><p>{[order.customer.address, order.customer.city, order.customer.state, order.customer.postal].filter(Boolean).join(', ')}</p><form className="admin-order-card__form" onSubmit={submit}><label><span>Fulfilment</span><select value={fulfilmentStatus} onChange={(event) => setFulfilmentStatus(event.target.value)}><option value="unfulfilled">Unfulfilled</option><option value="packing">Packing</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label><label><span>Tracking reference</span><input value={trackingNumber} onChange={(event) => setTrackingNumber(event.target.value)} maxLength="100" placeholder="Optional" /></label><button className="button button-dark" type="submit" disabled={state === 'saving'}>{state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved' : 'Save'} <Icon name={state === 'saved' ? 'check' : 'arrow'} size={14} /></button></form>{state === 'error' && <span className="form-error">This update could not be saved. Refresh and try again.</span>}</article>
+}
+
+function AdminPage({ account, onAuthenticate, onLogout }) {
+  const [dashboard, setDashboard] = useState(null)
+  const [status, setStatus] = useState(account ? 'loading' : 'idle')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!account) {
+      setDashboard(null)
+      setStatus('idle')
+      setError('')
+      return undefined
+    }
+    let cancelled = false
+    setStatus('loading')
+    setError('')
+    loadAdminDashboard().then((payload) => {
+      if (cancelled) return
+      setDashboard(payload)
+      setStatus('ready')
+    }).catch((adminError) => {
+      if (cancelled) return
+      setError(adminError.message || 'The admin dashboard could not be loaded.')
+      setStatus('error')
+    })
+    return () => { cancelled = true }
+  }, [account?.uid])
+
+  const saveOrder = async (changes) => {
+    const payload = await updateAdminOrder(changes)
+    setDashboard((current) => current ? { ...current, orders: current.orders.map((item) => item.orderId === payload.order.orderId ? payload.order : item) } : current)
+  }
+
+  if (!account) return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">Authorized team only</span><h1>Store administration.</h1><p>Sign in with an email listed in the secure admin configuration.</p><AuthForm onSuccess={onAuthenticate} /></div></main>
+  if (status === 'loading') return <main className="admin-page"><div className="page-shell"><div className="admin-state"><span className="eyebrow">Scudo / Store admin</span><h1>Verifying access…</h1><p>Checking your Firebase session and admin permissions.</p></div></div></main>
+  if (status === 'error') return <main className="admin-page"><div className="page-shell"><div className="admin-state admin-state--error"><span className="eyebrow">Access unavailable</span><h1>Admin access was not granted.</h1><p>{error}</p><div><Link to="/" className="button button-dark">Return to store</Link><button className="button button-ghost" onClick={onLogout}>Use another account</button></div></div></div></main>
+
+  const stats = [
+    ['Total orders', dashboard.stats.totalOrders, 'all recorded orders'],
+    ['Paid revenue', formatMoney(dashboard.stats.paidRevenue / 100), 'verified payments'],
+    ['To fulfil', dashboard.stats.unfulfilled, 'paid and unfulfilled'],
+    ['Customers', dashboard.stats.customers, 'unique email addresses']
+  ]
+
+  return <main className="admin-page"><div className="page-shell"><div className="admin-header"><div><span className="eyebrow">Scudo / Secure store admin</span><h1>Good morning, {dashboard.admin.name}.</h1><p>{dashboard.admin.email}</p></div><button className="button button-ghost" onClick={onLogout}>Log out</button></div><div className="admin-stats">{stats.map(([label, value, note]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div><div className="admin-grid"><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Catalog</span><h2>Product health</h2></div><Link to="/shop" className="text-link">View storefront <Icon name="arrow" size={14} /></Link></div><div className="admin-products">{products.map((product) => <div key={product.id}><CatalogImage src={product.shopImage || product.images[0]} sizes="45px" alt="" /><span>{product.name}<small>{product.sku}</small></span><strong className={product.inventory < 8 ? 'low-stock' : ''}>{product.isSoldOut ? 'Sold out' : `${product.inventory} in stock`}</strong></div>)}</div></section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Security</span><h2>Protected operations</h2></div><span className="status-pill">Verified</span></div><div className="admin-checklist">{['Firebase identity verified', 'Admin allow-list enforced', 'Razorpay totals verified on server', 'Payment webhook signatures verified'].map((item) => <div key={item}><span className="check is-done"><Icon name="check" size={13} /></span>{item}</div>)}</div></section><section className="admin-panel admin-orders-panel"><div className="panel-heading"><div><span className="eyebrow">Orders / {dashboard.orders.length}</span><h2>Fulfilment queue</h2></div><span className="connection-status">Updated {new Date(dashboard.generatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span></div>{dashboard.orders.length ? <div className="admin-orders">{dashboard.orders.map((order) => <AdminOrderEditor key={order.orderId} order={order} onSave={saveOrder} />)}</div> : <div className="admin-orders-empty"><span className="empty-mark">00</span><p>Orders will appear here after Razorpay creates them.</p></div>}</section></div></div></main>
+}
 
 export default function App() {
   const route = useRoute()
@@ -738,6 +1239,7 @@ export default function App() {
   else if (path === '/contact') content = <InfoPage type="contact" />
   else if (path === '/privacy') content = <InfoPage type="privacy" />
   else if (path === '/terms') content = <InfoPage type="terms" />
+  else if (path === '/returns') content = <InfoPage type="returns" />
   else if (path === '/wishlist') content = <WishlistPage wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
   else if (path === '/cart') content = <CartPage cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => navigate('/checkout')} />
   else if (path === '/checkout') content = <CheckoutPage cart={cart} onPlaceOrder={placeOrder} />
@@ -745,7 +1247,7 @@ export default function App() {
   else if (path === '/account') content = <AccountPage account={account} onAuthenticate={authenticate} onLogout={logout} />
   else if (path === '/orders') content = <OrdersPage account={account} order={order} />
   else if (path === '/settings') content = <SettingsPage account={account} />
-  else if (path === '/admin') content = <AdminPage />
+  else if (path === '/admin') content = <AdminPage account={account} onAuthenticate={authenticate} onLogout={logout} />
   else content = <InfoPage type="about" />
   return <div className={`app ${showIntro ? 'app--intro' : ''}`}><span className="scroll-progress" aria-hidden="true" /><Header cartCount={cartCount} wishlistCount={wishlist.length} account={account} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
 }

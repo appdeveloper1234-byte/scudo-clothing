@@ -5,4 +5,7 @@ dist/
 .env.*
 !.env.example
 *.log
+__pycache__/
+*.py[cod]
+ahsing-font.zip
 public/products/

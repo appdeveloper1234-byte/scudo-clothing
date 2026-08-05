@@ -14,6 +14,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_ROOT = PROJECT_ROOT / "public" / "products"
 
 
+def safe_output_path(relative_path: str) -> Path:
+    target = (OUTPUT_ROOT / relative_path).resolve()
+    output_root = OUTPUT_ROOT.resolve()
+    if target == output_root or output_root not in target.parents:
+        raise ValueError(f"Refusing unsafe Drive path: {relative_path}")
+    return target
+
+
 def list_files() -> list[dict[str, str]]:
     result = subprocess.run(
         [sys.executable, "-m", "gdown", "--folder", "--json", SHOP_ALL_FOLDER],
@@ -66,11 +74,12 @@ def main() -> int:
     skipped: list[str] = []
 
     for item in files:
-        relative_path = Path(item["path"])
-        target = OUTPUT_ROOT / relative_path
+        target = safe_output_path(item["path"])
         if download_file(item["url"], target):
             downloaded += 1
         else:
+            if target.exists():
+                target.unlink()
             skipped.append(item["path"])
 
     print(f"Available files: {downloaded}/{len(files)}")

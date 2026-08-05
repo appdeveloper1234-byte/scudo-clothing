@@ -3,14 +3,15 @@ import { createHmac } from 'node:crypto'
 import { buildTrustedOrder, calculateOrder, PaymentInputError } from '../netlify/functions/_lib/payment-core.mjs'
 import { verifyHmac } from '../netlify/functions/_lib/http.mjs'
 import createOrder from '../netlify/functions/create-razorpay-order.mjs'
+import adminDashboard from '../netlify/functions/admin-dashboard.mjs'
 
 const cart = [{ productId: 'brazil-blue-away', size: 'M', color: 'Navy', quantity: 2, price: 1 }]
 const calculated = calculateOrder(cart)
-assert.equal(calculated.subtotal, 2998, 'The server catalogue must control product pricing')
-assert.equal(calculated.shipping, 150)
-assert.equal(calculated.tax, 150)
-assert.equal(calculated.total, 3298)
-assert.equal(calculated.amount, 329800)
+assert.equal(calculated.subtotal, 2598, 'The server catalogue must control product pricing')
+assert.equal(calculated.shipping, 50)
+assert.equal('tax' in calculated, false)
+assert.equal(calculated.total, 2648)
+assert.equal(calculated.amount, 264800)
 
 const trusted = buildTrustedOrder({
   termsAccepted: true,
@@ -26,7 +27,7 @@ const trusted = buildTrustedOrder({
     postal: '400001'
   }
 })
-assert.equal(trusted.amount, 329800)
+assert.equal(trusted.amount, 264800)
 assert.equal(trusted.customer.email, 'tester@example.com')
 
 assert.throws(() => calculateOrder([{ ...cart[0], quantity: 99 }]), PaymentInputError)
@@ -48,5 +49,8 @@ const originResponse = await createOrder(new Request('http://localhost/api/payme
   body: JSON.stringify({})
 }))
 assert.equal(originResponse.status, 403)
+
+const adminWithoutToken = await adminDashboard(new Request('http://localhost/api/admin/dashboard'))
+assert.equal(adminWithoutToken.status, 401, 'Admin data must never be returned without a Firebase bearer token')
 
 console.log('Payment security tests passed.')
