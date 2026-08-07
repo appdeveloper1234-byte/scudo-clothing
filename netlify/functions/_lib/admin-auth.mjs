@@ -14,7 +14,7 @@ function serviceAccount() {
       if (parsed.private_key) parsed.private_key = parsed.private_key.replace(/\\n/g, '\n')
       return parsed
     } catch {
-      throw new HttpError(503, 'ADMIN_AUTH_NOT_CONFIGURED', 'Admin authentication is not configured correctly.')
+      throw new HttpError(503, 'SERVER_AUTH_NOT_CONFIGURED', 'Secure account storage is not configured correctly.')
     }
   }
 
@@ -22,7 +22,7 @@ function serviceAccount() {
   const clientEmail = clean(process.env.FIREBASE_ADMIN_CLIENT_EMAIL)
   const privateKey = clean(process.env.FIREBASE_ADMIN_PRIVATE_KEY).replace(/\\n/g, '\n')
   if (!projectId || !clientEmail || !privateKey) {
-    throw new HttpError(503, 'ADMIN_AUTH_NOT_CONFIGURED', 'Admin authentication is not configured yet.')
+    throw new HttpError(503, 'SERVER_AUTH_NOT_CONFIGURED', 'Secure account storage is not configured yet.')
   }
   return { projectId, clientEmail, privateKey }
 }
@@ -37,21 +37,34 @@ function adminApp() {
 function bearerToken(request) {
   const authorization = request.headers.get('authorization') || ''
   const match = authorization.match(/^Bearer\s+(.+)$/i)
-  if (!match) throw new HttpError(401, 'ADMIN_SIGN_IN_REQUIRED', 'Sign in with an authorized admin account.')
+  if (!match) throw new HttpError(401, 'SIGN_IN_REQUIRED', 'Sign in to continue.')
   return match[1]
 }
 
-export async function requireAdmin(request) {
+export async function requireAuthenticatedUser(request) {
   const token = bearerToken(request)
   let decoded
   try {
     decoded = await getAuth(adminApp()).verifyIdToken(token, true)
   } catch (error) {
     if (error instanceof HttpError) throw error
-    throw new HttpError(401, 'ADMIN_SESSION_INVALID', 'Your admin session has expired. Sign in again.')
+    throw new HttpError(401, 'SESSION_INVALID', 'Your session has expired. Sign in again.')
   }
 
-  const email = clean(decoded.email).toLowerCase()
+  return {
+    uid: decoded.uid,
+    email: clean(decoded.email).toLowerCase(),
+    emailVerified: decoded.email_verified === true,
+    name: clean(decoded.name) || clean(decoded.email).split('@')[0] || 'Scudo member',
+    decoded
+  }
+}
+
+export async function requireAdmin(request) {
+  const user = await requireAuthenticatedUser(request)
+  const { decoded } = user
+
+  const email = user.email
   const allowedEmails = new Set(clean(process.env.ADMIN_EMAILS)
     .split(',')
     .map((value) => value.trim().toLowerCase())
@@ -60,8 +73,8 @@ export async function requireAdmin(request) {
   if (!authorized) throw new HttpError(403, 'ADMIN_ACCESS_DENIED', 'This account does not have Scudo admin access.')
 
   return {
-    uid: decoded.uid,
+    uid: user.uid,
     email,
-    name: clean(decoded.name) || email.split('@')[0] || 'Admin'
+    name: user.name || email.split('@')[0] || 'Admin'
   }
 }

@@ -19,6 +19,8 @@ const publicOrder = (order) => ({
     email: order.customer?.email || '',
     phone: order.customer?.phone || '',
     address: order.customer?.address || '',
+    address2: order.customer?.address2 || '',
+    landmark: order.customer?.landmark || '',
     city: order.customer?.city || '',
     state: order.customer?.state || '',
     postal: order.customer?.postal || ''

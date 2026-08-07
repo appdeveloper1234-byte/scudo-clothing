@@ -13,6 +13,13 @@ import {
   watchFirebaseAuth
 } from './firebaseAuth.js'
 import { loadAdminDashboard, updateAdminOrder } from './adminApi.js'
+import {
+  isCustomerProfileComplete,
+  loadCustomerProfile,
+  normalizeCustomerProfile,
+  saveCustomerProfile,
+  validateCustomerProfile
+} from './customerProfile.js'
 
 const catalogImages = (slug, count) => Array.from({ length: count }, (_, index) => `/catalog/${slug}/${String(index + 1).padStart(2, '0')}.webp`)
 const catalogVariant = (src, width) => src.replace(/\.webp$/, `-${width}.webp`)
@@ -614,7 +621,19 @@ function CartPage({ cart, onUpdateQuantity, onRemove, onCheckout }) {
 function OrderSummary({ subtotal, shipping, onCheckout, checkoutLabel = 'Checkout', disabled = false }) { return <aside className="order-summary"><span className="eyebrow">Summary</span><h2>Matchday total</h2><div className="summary-lines"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><div><span>Shipping</span><strong>{formatMoney(shipping)}</strong></div></div><div className="summary-total"><span>Total</span><strong>{formatMoney(subtotal + shipping)}</strong></div><button className="button button-dark" type="button" onClick={onCheckout} disabled={!subtotal || disabled}>{checkoutLabel} <Icon name="arrow" size={16} /></button><p className="secure-note">Totals are verified on our server · payments secured by Razorpay · all sales final.</p></aside> }
 
 function CheckoutPage({ cart, account, onPlaceOrder }) {
-  const [form, setForm] = useState({ name: account?.name || '', email: account?.email || '', phone: '', address: '', city: '', state: '', country: 'India', postal: '', terms: false })
+  const [form, setForm] = useState({
+    name: account?.name || '',
+    email: account?.email || '',
+    phone: account?.phone || '',
+    address: account?.address || '',
+    address2: account?.address2 || '',
+    landmark: account?.landmark || '',
+    city: account?.city || '',
+    state: account?.state || '',
+    country: 'India',
+    postal: account?.postal || '',
+    terms: false
+  })
   const [error, setError] = useState('')
   const [stage, setStage] = useState('idle')
   const paymentLock = useRef(false)
@@ -647,11 +666,11 @@ function CheckoutPage({ cart, account, onPlaceOrder }) {
     }
   }
   const submit = (event) => { event.preventDefault(); validateAndPlace() }
-  return <main className="checkout-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Checkout' }]} /><div className="checkout-heading"><span className="eyebrow">Secure Razorpay checkout</span><h1>Ready when you are.</h1><p>Your total is recalculated on our server before Razorpay opens. Scudo never receives or stores your card, UPI PIN, or banking credentials.</p></div>{!cart.length ? <EmptyState title="Your bag is empty" copy="Add something before checking out." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} /> : <form className="checkout-layout" onSubmit={submit}><div className="checkout-form"><FormSection title="Contact"><div className="form-grid"><Field label="Full name" value={form.name} onChange={(v) => update('name', v)} required autoComplete="name" /><Field label="Email address" type="email" value={form.email} onChange={(v) => update('email', v)} required autoComplete="email" /><Field label="Phone number" type="tel" value={form.phone} onChange={(v) => update('phone', v)} required autoComplete="tel" /></div></FormSection><FormSection title="Delivery address"><div className="form-grid"><Field label="Address" value={form.address} onChange={(v) => update('address', v)} required wide autoComplete="street-address" /><Field label="City" value={form.city} onChange={(v) => update('city', v)} required autoComplete="address-level2" /><Field label="State" value={form.state} onChange={(v) => update('state', v)} required autoComplete="address-level1" /><Field label="Country" value={form.country} onChange={(v) => update('country', v)} required autoComplete="country-name" /><Field label="Postal code" value={form.postal} onChange={(v) => update('postal', v)} required autoComplete="postal-code" /></div></FormSection><FormSection title="Payment"><div className="payment-note payment-note--secure"><span className="payment-badge">RAZORPAY</span><p><strong>Choose UPI, card, wallet, or net banking securely in Razorpay Checkout.</strong><br />Payment is accepted only after server-side signature and captured-status verification.</p></div></FormSection><label className="checkbox-row"><input type="checkbox" checked={form.terms} onChange={(e) => update('terms', e.target.checked)} /><span>I agree to the <Link to="/terms">terms</Link>, <Link to="/returns">return policy</Link>, and <Link to="/privacy">privacy policy</Link>.</span></label>{error && <p className="form-error form-error--block" role="alert">{error}</p>}<button className="button button-dark place-order" type="submit" disabled={placing} aria-busy={placing}>{buttonLabel} <Icon name="arrow" size={16} /></button></div><OrderSummary subtotal={subtotal} shipping={shipping} checkoutLabel={buttonLabel} onCheckout={validateAndPlace} disabled={placing} /></form>}</div></main>
+  return <main className="checkout-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Checkout' }]} /><div className="checkout-heading"><span className="eyebrow">Secure Razorpay checkout</span><h1>Ready when you are.</h1><p>Your saved delivery details are ready below. Your total is recalculated on our server before Razorpay opens, and Scudo never receives or stores your card, UPI PIN, or banking credentials.</p></div>{!cart.length ? <EmptyState title="Your bag is empty" copy="Add something before checking out." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} /> : <form className="checkout-layout" onSubmit={submit}><div className="checkout-form"><FormSection title="Contact"><div className="form-grid"><Field label="Full name" value={form.name} onChange={(v) => update('name', v)} required autoComplete="name" /><Field label="Email address" type="email" value={form.email} onChange={(v) => update('email', v)} required autoComplete="email" /><Field label="Phone number" type="tel" value={form.phone} onChange={(v) => update('phone', v)} required autoComplete="tel" inputMode="tel" maxLength={24} /></div></FormSection><FormSection title="Delivery address"><div className="form-grid"><Field label="House number and street" value={form.address} onChange={(v) => update('address', v)} required wide autoComplete="address-line1" maxLength={220} /><Field label="Apartment, area or floor" value={form.address2} onChange={(v) => update('address2', v)} wide autoComplete="address-line2" maxLength={120} /><Field label="Landmark (optional)" value={form.landmark} onChange={(v) => update('landmark', v)} wide maxLength={120} /><Field label="City" value={form.city} onChange={(v) => update('city', v)} required autoComplete="address-level2" maxLength={80} /><Field label="State" value={form.state} onChange={(v) => update('state', v)} required autoComplete="address-level1" maxLength={80} /><Field label="Country" value={form.country} onChange={(v) => update('country', v)} required autoComplete="country-name" readOnly /><Field label="PIN code" value={form.postal} onChange={(v) => update('postal', v.replace(/\D/g, '').slice(0, 6))} required autoComplete="postal-code" inputMode="numeric" maxLength={6} /></div></FormSection><FormSection title="Payment"><div className="payment-note payment-note--secure"><span className="payment-badge">RAZORPAY</span><p><strong>Choose UPI, card, wallet, or net banking securely in Razorpay Checkout.</strong><br />Payment is accepted only after server-side signature and captured-status verification.</p></div></FormSection><label className="checkbox-row"><input type="checkbox" checked={form.terms} onChange={(e) => update('terms', e.target.checked)} /><span>I agree to the <Link to="/terms">terms</Link>, <Link to="/returns">return policy</Link>, and <Link to="/privacy">privacy policy</Link>.</span></label>{error && <p className="form-error form-error--block" role="alert">{error}</p>}<button className="button button-dark place-order" type="submit" disabled={placing} aria-busy={placing}>{buttonLabel} <Icon name="arrow" size={16} /></button></div><OrderSummary subtotal={subtotal} shipping={shipping} checkoutLabel={buttonLabel} onCheckout={validateAndPlace} disabled={placing} /></form>}</div></main>
 }
 
 function FormSection({ title, children }) { return <section className="form-section"><h2>{title}</h2>{children}</section> }
-function Field({ label, type = 'text', value, onChange, required, wide, autoComplete }) { return <label className={`field ${wide ? 'field--wide' : ''}`}><span>{label}{required && ' *'}</span><input type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} autoComplete={autoComplete} /></label> }
+function Field({ label, type = 'text', value, onChange, required, wide, autoComplete, inputMode, maxLength, placeholder, readOnly = false }) { return <label className={`field ${wide ? 'field--wide' : ''}`}><span>{label}{required && ' *'}</span><input type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} autoComplete={autoComplete} inputMode={inputMode} maxLength={maxLength} placeholder={placeholder} readOnly={readOnly} /></label> }
 
 function OrderConfirmation({ order }) { const paid = order?.payment?.status === 'Paid'; const processing = order?.payment?.status === 'Processing'; return <main className="confirmation-page"><div className="confirmation-card"><div className="confirmation-mark"><Icon name={paid ? 'check' : 'chevron'} size={26} /></div><span className="eyebrow">Order received / {order?.number || 'SC-PENDING'}</span><h1>{paid ? 'Payment confirmed.' : 'Payment received.'}</h1><p>{paid ? 'Razorpay verified and captured your payment securely.' : processing ? 'Your payment signature is verified and Razorpay is completing capture. Do not submit another payment for this order.' : 'Your order is being reviewed.'} Report verified damaged, defective, incorrect, or missing-item issues within 48 hours of delivery.</p><div className="confirmation-meta"><div><span>Payment status</span><strong>{order?.payment?.status || 'Processing'}</strong></div><div><span>Estimated delivery</span><strong>4–15 business days after capture</strong></div><div><span>Ship to</span><strong>{order?.city || 'Your city'}, {order?.country || 'India'}</strong></div></div><Link to="/shop" className="button button-dark">Continue shopping <Icon name="arrow" size={16} /></Link></div></main> }
 
@@ -1181,7 +1200,7 @@ function AuthForm({ onSuccess, compact = false }) {
     setNotice('')
     setStatus('email')
     try {
-      onSuccess(await authenticateWithEmail({ mode, name: name.trim(), email: email.trim().toLowerCase(), password }))
+      await onSuccess(await authenticateWithEmail({ mode, name: name.trim(), email: email.trim().toLowerCase(), password }))
     } catch (emailError) {
       setError(firebaseAuthErrorMessage(emailError, 'email'))
       setStatus('idle')
@@ -1193,7 +1212,7 @@ function AuthForm({ onSuccess, compact = false }) {
     setNotice('')
     setStatus('google')
     try {
-      onSuccess(await signInWithGoogle())
+      await onSuccess(await signInWithGoogle())
     } catch (googleError) {
       setError(firebaseAuthErrorMessage(googleError))
       setStatus('idle')
@@ -1234,6 +1253,59 @@ function AuthGate({ onClose, onAuthenticated }) {
   return <div className="auth-gate-overlay" onClick={onClose}><aside className="auth-gate-card" ref={panelRef} onClick={(event) => event.stopPropagation()} aria-label="Sign in required"><button className="icon-button auth-gate-close" onClick={onClose} aria-label="Close login panel"><Icon name="close" /></button><ScudoLogo size="sm" showSubtitle={false} showShadow={false} /><span className="eyebrow">Members first</span><h2>Sign in to add<br /><em>to your bag.</em></h2><p>Create an account or log in to keep your rotation saved.</p><AuthForm onSuccess={onAuthenticated} compact /></aside></div>
 }
 
+function DeliveryProfileSetup({ account, onSave }) {
+  const panelRef = useOverlayFocus(true, () => {})
+  const [form, setForm] = useState(() => normalizeCustomerProfile(account))
+  const [status, setStatus] = useState('idle')
+  const [error, setError] = useState('')
+  const update = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+
+  useEffect(() => { setForm(normalizeCustomerProfile(account)) }, [account?.uid])
+
+  const submit = async (event) => {
+    event.preventDefault()
+    if (status === 'saving') return
+    const validationError = validateCustomerProfile(form)
+    if (validationError) return setError(validationError)
+    setError('')
+    setStatus('saving')
+    try {
+      await onSave(form)
+      setStatus('saved')
+    } catch (saveError) {
+      setError(saveError?.message || 'Your delivery details could not be saved. Please try again.')
+      setStatus('idle')
+    }
+  }
+
+  return createPortal(<div className="profile-setup-overlay">
+    <section className="profile-setup-card" ref={panelRef} role="dialog" aria-modal="true" aria-labelledby="delivery-profile-title">
+      <div className="profile-setup-progress" aria-label="Account setup step 2 of 2"><span /><span className="is-active" /></div>
+      <div className="profile-setup-heading">
+        <div><span className="eyebrow">Account created / One last step</span><h2 id="delivery-profile-title">Where should<br /><em>we deliver?</em></h2></div>
+        <span className="profile-setup-step">02 / 02</span>
+      </div>
+      <p className="profile-setup-intro">Save your contact and delivery details once. They will be ready at checkout and can be changed later in Settings.</p>
+      <form onSubmit={submit}>
+        <div className="profile-setup-grid">
+          <Field label="Full name" value={form.name} onChange={(value) => update('name', value)} required autoComplete="name" maxLength={80} />
+          <Field label="Phone number" type="tel" value={form.phone} onChange={(value) => update('phone', value)} required autoComplete="tel" inputMode="tel" maxLength={24} placeholder="10-digit mobile number" />
+          <Field label="House number and street" value={form.address} onChange={(value) => update('address', value)} required wide autoComplete="address-line1" maxLength={220} />
+          <Field label="Apartment, area or floor" value={form.address2} onChange={(value) => update('address2', value)} wide autoComplete="address-line2" maxLength={120} placeholder="Optional" />
+          <Field label="Landmark" value={form.landmark} onChange={(value) => update('landmark', value)} wide maxLength={120} placeholder="Optional" />
+          <Field label="City" value={form.city} onChange={(value) => update('city', value)} required autoComplete="address-level2" maxLength={80} />
+          <Field label="State" value={form.state} onChange={(value) => update('state', value)} required autoComplete="address-level1" maxLength={80} />
+          <Field label="PIN code" value={form.postal} onChange={(value) => update('postal', value.replace(/\D/g, '').slice(0, 6))} required autoComplete="postal-code" inputMode="numeric" maxLength={6} />
+          <Field label="Country" value="India" onChange={() => {}} readOnly autoComplete="country-name" />
+        </div>
+        {error && <p className="form-error form-error--block" role="alert">{error}</p>}
+        <button className="button button-dark profile-setup-submit" type="submit" disabled={status === 'saving'} aria-busy={status === 'saving'}>{status === 'saving' ? 'Saving delivery details…' : 'Save & continue'} <Icon name={status === 'saved' ? 'check' : 'arrow'} size={16} /></button>
+        <p className="profile-setup-privacy">Your details are linked to your signed-in account and used for checkout, delivery, and order support. Read our <Link to="/privacy">privacy policy</Link>.</p>
+      </form>
+    </section>
+  </div>, document.body)
+}
+
 function AccountPage({ account, order, onAuthenticate, onLogout }) {
   if (account) {
     const initials = account.name?.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'SC'
@@ -1264,22 +1336,31 @@ function OrdersPage({ account, order }) {
 }
 
 function SettingsPage({ account, onSaveProfile, onSendPasswordReset, onSendVerification, onLogout }) {
-  const [name, setName] = useState(account?.name || '')
+  const savedProfile = useMemo(() => normalizeCustomerProfile(account), [account])
+  const [profile, setProfile] = useState(savedProfile)
   const [profileState, setProfileState] = useState('idle')
   const [securityState, setSecurityState] = useState('idle')
   const [message, setMessage] = useState('')
-  useEffect(() => { setName(account?.name || '') }, [account?.name])
+  useEffect(() => { setProfile(savedProfile) }, [savedProfile])
   if (!account) return <main className="account-page"><div className="account-card"><span className="eyebrow">Members first</span><h1>Log in to manage settings.</h1><Link to="/account" className="button button-dark">Log in <Icon name="arrow" size={16} /></Link></div></main>
+  const updateProfileField = (key, value) => setProfile((current) => ({ ...current, [key]: value }))
+  const profileChanged = JSON.stringify(normalizeCustomerProfile(profile)) !== JSON.stringify(savedProfile)
   const saveProfile = async (event) => {
     event.preventDefault()
+    const validationError = validateCustomerProfile(profile)
+    if (validationError) {
+      setProfileState('error')
+      return setMessage(validationError)
+    }
     setMessage('')
     setProfileState('saving')
     try {
-      await onSaveProfile(name)
+      await onSaveProfile(profile)
       setProfileState('saved')
+      setMessage('Your account and delivery details are up to date.')
       window.setTimeout(() => setProfileState('idle'), 1800)
     } catch (error) {
-      setMessage(firebaseAuthErrorMessage(error, 'email'))
+      setMessage(error?.message || firebaseAuthErrorMessage(error, 'email'))
       setProfileState('error')
     }
   }
@@ -1298,16 +1379,26 @@ function SettingsPage({ account, onSaveProfile, onSendPasswordReset, onSendVerif
   const providerLabel = account.provider === 'google' ? 'Google' : 'Email and password'
   return <main className="settings-page"><div className="page-shell">
     <Breadcrumbs items={[{ label: 'Settings' }]} />
-    <div className="account-page-heading"><span className="eyebrow">Account controls</span><h1>Settings.</h1><p>Manage your profile, sign-in security, and customer-care links.</p></div>
+    <div className="account-page-heading"><span className="eyebrow">Account controls</span><h1>Settings.</h1><p>Manage your delivery profile, sign-in security, and customer-care links.</p></div>
     {message && <p className={`settings-message ${profileState === 'error' || securityState === 'error' ? 'is-error' : ''}`} role="status">{message}</p>}
     <div className="settings-layout">
-      <form className="settings-panel" onSubmit={saveProfile}>
-        <div className="settings-panel__heading"><div><span className="settings-index">01</span><h2>Profile</h2></div><span className="status-pill">Firebase secured</span></div>
-        <p className="settings-panel__intro">Your display name appears across your Scudo account.</p>
-        <label className="field"><span>Full name</span><input value={name} onChange={(event) => setName(event.target.value)} minLength="2" maxLength="80" autoComplete="name" required /></label>
-        <label className="field"><span>Email address</span><input type="email" value={account.email} readOnly aria-describedby="email-help" /></label>
+      <form className="settings-panel settings-panel--profile" onSubmit={saveProfile}>
+        <div className="settings-panel__heading"><div><span className="settings-index">01</span><h2>Profile &amp; delivery</h2></div><span className="status-pill">Account secured</span></div>
+        <p className="settings-panel__intro">These details are saved to your signed-in account and pre-filled when you checkout.</p>
+        <div className="settings-profile-grid">
+          <Field label="Full name" value={profile.name} onChange={(value) => updateProfileField('name', value)} required autoComplete="name" maxLength={80} />
+          <Field label="Phone number" type="tel" value={profile.phone} onChange={(value) => updateProfileField('phone', value)} required autoComplete="tel" inputMode="tel" maxLength={24} />
+          <Field label="Email address" type="email" value={account.email} onChange={() => {}} readOnly />
+          <Field label="House number and street" value={profile.address} onChange={(value) => updateProfileField('address', value)} required wide autoComplete="address-line1" maxLength={220} />
+          <Field label="Apartment, area or floor" value={profile.address2} onChange={(value) => updateProfileField('address2', value)} wide autoComplete="address-line2" maxLength={120} placeholder="Optional" />
+          <Field label="Landmark" value={profile.landmark} onChange={(value) => updateProfileField('landmark', value)} wide maxLength={120} placeholder="Optional" />
+          <Field label="City" value={profile.city} onChange={(value) => updateProfileField('city', value)} required autoComplete="address-level2" maxLength={80} />
+          <Field label="State" value={profile.state} onChange={(value) => updateProfileField('state', value)} required autoComplete="address-level1" maxLength={80} />
+          <Field label="PIN code" value={profile.postal} onChange={(value) => updateProfileField('postal', value.replace(/\D/g, '').slice(0, 6))} required autoComplete="postal-code" inputMode="numeric" maxLength={6} />
+          <Field label="Country" value="India" onChange={() => {}} readOnly autoComplete="country-name" />
+        </div>
         <p className="field-help" id="email-help">Your sign-in email is managed securely by {providerLabel}. Contact support if it must be changed.</p>
-        <div className="settings-panel__footer"><button className="button button-dark" type="submit" disabled={profileState === 'saving' || name.trim() === account.name}>{profileState === 'saving' ? 'Saving...' : profileState === 'saved' ? 'Profile saved' : 'Save profile'} <Icon name={profileState === 'saved' ? 'check' : 'arrow'} size={16} /></button></div>
+        <div className="settings-panel__footer"><button className="button button-dark" type="submit" disabled={profileState === 'saving' || !profileChanged}>{profileState === 'saving' ? 'Saving...' : profileState === 'saved' ? 'Details saved' : 'Save details'} <Icon name={profileState === 'saved' ? 'check' : 'arrow'} size={16} /></button></div>
       </form>
 
       <section className="settings-panel">
@@ -1351,7 +1442,7 @@ function AdminOrderEditor({ order, onSave }) {
     }
   }
 
-  return <article className="admin-order-card"><div className="admin-order-card__head"><div><span className="eyebrow">{order.receipt || order.orderId}</span><h3>{order.customer.name || 'Customer'}</h3></div><span className={`status-pill status-pill--${order.paymentStatus}`}>{order.paymentStatus}</span></div><div className="admin-order-card__meta"><span>{new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN')}</span><span>{order.customer.email}</span><strong>{formatMoney((order.amount || 0) / 100)}</strong></div><div className="admin-order-card__items">{order.lineItems.map((item) => <span key={`${order.orderId}-${item.productId}-${item.size}`}>{item.quantity} × {item.name} / {item.size}</span>)}</div><p>{[order.customer.address, order.customer.city, order.customer.state, order.customer.postal].filter(Boolean).join(', ')}</p><form className="admin-order-card__form" onSubmit={submit}><label><span>Fulfilment</span><select value={fulfilmentStatus} onChange={(event) => setFulfilmentStatus(event.target.value)}><option value="unfulfilled">Unfulfilled</option><option value="packing">Packing</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label><label><span>Tracking reference</span><input value={trackingNumber} onChange={(event) => setTrackingNumber(event.target.value)} maxLength="100" placeholder="Optional" /></label><button className="button button-dark" type="submit" disabled={state === 'saving'}>{state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved' : 'Save'} <Icon name={state === 'saved' ? 'check' : 'arrow'} size={14} /></button></form>{state === 'error' && <span className="form-error">This update could not be saved. Refresh and try again.</span>}</article>
+  return <article className="admin-order-card"><div className="admin-order-card__head"><div><span className="eyebrow">{order.receipt || order.orderId}</span><h3>{order.customer.name || 'Customer'}</h3></div><span className={`status-pill status-pill--${order.paymentStatus}`}>{order.paymentStatus}</span></div><div className="admin-order-card__meta"><span>{new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN')}</span><span>{order.customer.email}</span><strong>{formatMoney((order.amount || 0) / 100)}</strong></div><div className="admin-order-card__items">{order.lineItems.map((item) => <span key={`${order.orderId}-${item.productId}-${item.size}`}>{item.quantity} × {item.name} / {item.size}</span>)}</div><p>{[order.customer.address, order.customer.address2, order.customer.landmark && `Landmark: ${order.customer.landmark}`, order.customer.city, order.customer.state, order.customer.postal].filter(Boolean).join(', ')}</p><form className="admin-order-card__form" onSubmit={submit}><label><span>Fulfilment</span><select value={fulfilmentStatus} onChange={(event) => setFulfilmentStatus(event.target.value)}><option value="unfulfilled">Unfulfilled</option><option value="packing">Packing</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label><label><span>Tracking reference</span><input value={trackingNumber} onChange={(event) => setTrackingNumber(event.target.value)} maxLength="100" placeholder="Optional" /></label><button className="button button-dark" type="submit" disabled={state === 'saving'}>{state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved' : 'Save'} <Icon name={state === 'saved' ? 'check' : 'arrow'} size={14} /></button></form>{state === 'error' && <span className="form-error">This update could not be saved. Refresh and try again.</span>}</article>
 }
 
 function AdminPage({ account, onAuthenticate, onLogout }) {
@@ -1412,9 +1503,28 @@ export default function App() {
   const [account, setAccount] = usePersistedState('scudo-account', null)
   const [cartOpen, setCartOpen] = useState(false)
   const [authPrompt, setAuthPrompt] = useState(false)
+  const [profileSetupOpen, setProfileSetupOpen] = useState(false)
   const [pendingAdd, setPendingAdd] = useState(null)
   const [order, setOrder] = usePersistedState('scudo-last-order', null)
-  useEffect(() => watchFirebaseAuth(setAccount), [setAccount])
+  useEffect(() => {
+    let active = true
+    const unsubscribe = watchFirebaseAuth(async (firebaseProfile) => {
+      if (!active) return
+      if (!firebaseProfile) {
+        setAccount(null)
+        setProfileSetupOpen(false)
+        return
+      }
+      const profile = await loadCustomerProfile(firebaseProfile)
+      if (!active) return
+      setAccount(profile)
+      setProfileSetupOpen(!isCustomerProfileComplete(profile))
+    })
+    return () => { active = false; unsubscribe() }
+  }, [setAccount])
+  useEffect(() => {
+    if (account?.uid && !isCustomerProfileComplete(account)) setProfileSetupOpen(true)
+  }, [account])
   useEffect(() => {
     window.localStorage.removeItem('scudo-preferences')
     delete document.documentElement.dataset.motion
@@ -1422,10 +1532,40 @@ export default function App() {
   useEffect(() => { document.title = path === '/' ? 'Scudo Clothing — Football-inspired streetwear' : `${path.replace('/', '').replaceAll('/', ' / ')} — Scudo Clothing` }, [route, path])
   const toggleWishlist = (id) => setWishlist((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
   const addToCartNow = (product, size, color, quantity = 1) => { const key = `${product.id}-${size}-${color}`; setCart((current) => { const existing = current.find((item) => item.key === key); return existing ? current.map((item) => item.key === key ? { ...item, quantity: item.quantity + quantity } : item) : [...current, { key, product, size, color, quantity }] }); setCartOpen(true); return 'added' }
-  const addToCart = (product, size, color, quantity = 1) => { if (!account) { setPendingAdd({ product, size, color, quantity }); setAuthPrompt(true); return 'auth-required' }; return addToCartNow(product, size, color, quantity) }
-  const authenticate = (profile) => { setAccount(profile); setAuthPrompt(false); if (pendingAdd) { addToCartNow(pendingAdd.product, pendingAdd.size, pendingAdd.color, pendingAdd.quantity); setPendingAdd(null) } }
-  const logout = async () => { await signOutFirebase(); setAccount(null) }
-  const saveProfile = async (name) => { const profile = await updateFirebaseProfile({ name }); setAccount(profile); return profile }
+  const finishPendingAdd = () => { if (pendingAdd) { addToCartNow(pendingAdd.product, pendingAdd.size, pendingAdd.color, pendingAdd.quantity); setPendingAdd(null) } }
+  const addToCart = (product, size, color, quantity = 1) => {
+    if (!account || !isCustomerProfileComplete(account)) {
+      setPendingAdd({ product, size, color, quantity })
+      if (account) setProfileSetupOpen(true)
+      else setAuthPrompt(true)
+      return account ? 'profile-required' : 'auth-required'
+    }
+    return addToCartNow(product, size, color, quantity)
+  }
+  const authenticate = async (firebaseProfile) => {
+    setAuthPrompt(false)
+    const profile = await loadCustomerProfile(firebaseProfile)
+    setAccount(profile)
+    if (!isCustomerProfileComplete(profile)) {
+      setProfileSetupOpen(true)
+      return profile
+    }
+    finishPendingAdd()
+    return profile
+  }
+  const logout = async () => { await signOutFirebase(); setAccount(null); setProfileSetupOpen(false); setPendingAdd(null) }
+  const saveProfile = async (details) => {
+    const firebaseProfile = await updateFirebaseProfile({ name: details.name })
+    const profile = await saveCustomerProfile(firebaseProfile, details)
+    setAccount(profile)
+    return profile
+  }
+  const completeProfileSetup = async (details) => {
+    const profile = await saveProfile(details)
+    setProfileSetupOpen(false)
+    finishPendingAdd()
+    return profile
+  }
   const sendPasswordReset = () => sendFirebasePasswordReset(account?.email)
   const sendVerification = () => sendFirebaseVerificationEmail()
   const closeAuthPrompt = () => { setAuthPrompt(false); setPendingAdd(null) }
@@ -1457,5 +1597,5 @@ export default function App() {
   else if (path === '/settings') content = <SettingsPage account={account} onSaveProfile={saveProfile} onSendPasswordReset={sendPasswordReset} onSendVerification={sendVerification} onLogout={logout} />
   else if (path === '/admin') content = <AdminPage account={account} onAuthenticate={authenticate} onLogout={logout} />
   else content = <InfoPage type="about" />
-  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><span className="scroll-progress" aria-hidden="true" /><Header cartCount={cartCount} wishlistCount={wishlist.length} account={account} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
+  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><span className="scroll-progress" aria-hidden="true" /><Header cartCount={cartCount} wishlistCount={wishlist.length} account={account} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{profileSetupOpen && account && !showIntro && <DeliveryProfileSetup account={account} onSave={completeProfileSetup} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
 }

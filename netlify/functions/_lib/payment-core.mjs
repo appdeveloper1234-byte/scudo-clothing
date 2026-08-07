@@ -21,6 +21,12 @@ function requiredText(value, field, maxLength) {
   return normalized
 }
 
+function optionalText(value, maxLength) {
+  if (value == null || value === '') return ''
+  if (typeof value !== 'string') throw new PaymentInputError('An address field is invalid.')
+  return value.trim().replace(/\s+/g, ' ').slice(0, maxLength)
+}
+
 export function validateCustomer(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new PaymentInputError('Customer details are required.')
   const customer = {
@@ -28,6 +34,8 @@ export function validateCustomer(input) {
     email: requiredText(input.email, 'Email address', 120).toLowerCase(),
     phone: requiredText(input.phone, 'Phone number', 24),
     address: requiredText(input.address, 'Address', 220),
+    address2: optionalText(input.address2, 120),
+    landmark: optionalText(input.landmark, 120),
     city: requiredText(input.city, 'City', 80),
     state: requiredText(input.state || 'Not specified', 'State', 80),
     country: requiredText(input.country || 'India', 'Country', 60),
