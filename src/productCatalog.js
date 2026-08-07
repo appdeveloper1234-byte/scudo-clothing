@@ -17,7 +17,7 @@ export const products = [
     id: 'argentina-champions-home', name: 'Argentina Champions Home Jersey', slug: 'argentina-champions-home-jersey',
     description: 'The iconic sky-blue and white home shirt, finished with the champions badge and gold crest details.',
     shortDescription: 'Champions-edition Argentina home jersey.', collection: 'Master Version', edits: ['new-arrivals', 'master-version'],
-    price: 2999, salePrice: 499, sku: 'SC-ARG-M01', colors: ['Sky blue', 'White'], inventory: 17,
+    price: 2999, salePrice: 1499, sku: 'SC-ARG-M01', colors: ['Sky blue', 'White'], inventory: 17,
     images: catalogImages('argentina-champions-home', 6), shopImage: shopMainImage('argentina-champions-home'), isNew: true, isFeatured: false
   },
   {

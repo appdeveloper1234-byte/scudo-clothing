@@ -32,7 +32,7 @@ const categoryHeroImages = {
   bestsellers: '/category-heroes/bestsellers.jpg',
   'new-arrivals': '/category-heroes/new-arrivals.jpg',
   'shop-all': '/category-heroes/shop-all.jpg',
-  'master-version': '/category-heroes/master-version.jpg',
+  'master-version': '/category-heroes/master-version.png',
   'player-version': '/category-heroes/player-version.jpg',
   'affordable-kits': '/category-heroes/affordable-kits.jpg'
 }
@@ -70,6 +70,7 @@ const formatMoney = (amount) => new Intl.NumberFormat('en-IN', { style: 'currenc
 const SHIPPING_CHARGE = 50
 
 const socialLinks = [
+  { name: 'WhatsApp', handle: '+91 87674 16351', href: 'https://wa.me/918767416351', icon: 'whatsapp' },
   { name: 'Instagram', handle: '@scudoclothings', href: 'https://www.instagram.com/scudoclothings/', icon: 'instagram' },
   { name: 'X', handle: '@scudoclothings', href: 'https://x.com/scudoclothings', icon: 'x' },
   { name: 'Facebook', handle: '@scudoclothings', href: 'https://www.facebook.com/scudoclothings', icon: 'facebook' },
@@ -91,6 +92,7 @@ function Icon({ name, size = 18 }) {
     chevron: <path d="m8 10 4 4 4-4" />,
     check: <path d="m5 12 4 4L19 6" />,
     filter: <><path d="M4 6h16M7 12h10M10 18h4" /></>,
+    whatsapp: <><path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.5L3.5 20.5l1.4-4.3a8.5 8.5 0 1 1 15.6-4.6Z" /><path d="M8.2 7.6c.2-.5.4-.5.8-.5h.4c.2 0 .4.1.5.4l.8 1.8c.1.3.1.5-.1.7l-.7.8c-.2.2-.1.4 0 .6.7 1.3 1.7 2.2 3 2.9.2.1.4.2.6 0l.9-1c.2-.2.4-.3.7-.2l1.8.9c.3.1.4.3.4.5 0 .4-.2 1.4-.8 1.9-.6.5-1.4.7-2.3.5-1.1-.2-2.7-.8-4.6-2.5-1.5-1.4-2.5-3-2.8-4.1-.3-1-.1-2 .4-2.7Z" /></>,
     instagram: <><rect x="4" y="4" width="16" height="16" rx="4" /><circle cx="12" cy="12" r="3.5" /><circle cx="17.5" cy="6.7" r=".8" fill="currentColor" stroke="none" /></>,
     x: <><path d="M5 4 19 20" /><path d="M19 4 5 20" /></>,
     facebook: <path d="M14 21v-8h3l.6-4H14V7c0-1.2.5-2 2.2-2H18V1.5c-.8-.1-1.8-.2-2.8-.2C12 1.3 10 3.2 10 6.7V9H7v4h3v8h4Z" fill="currentColor" stroke="none" />,
