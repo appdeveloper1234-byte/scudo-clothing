@@ -13,7 +13,7 @@
     "@netlify/blobs": "^10.7.11",
     "@vitejs/plugin-react": "latest",
     "firebase": "^12.17.0",
-    "firebase-admin": "^14.2.0",
+    "firebase-admin": "13.10.0",
     "react": "latest",
     "react-dom": "latest",
     "vite": "latest"
