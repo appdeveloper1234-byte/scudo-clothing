@@ -9,6 +9,14 @@
 }
 
 @font-face {
+  font-family: 'Scudo Ahsing';
+  src: url('/fonts/typogama-ahsing.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
   font-family: 'Scudo Wordmark';
   src: url('/fonts/caprasimo-regular.ttf') format('truetype');
   font-style: normal;
@@ -111,7 +119,7 @@ h1, h2, h3 { font-weight: 400; }
 .scudo-logo { position: relative; width: 360px; height: 271px; display: block; flex: 0 0 auto; overflow: visible; background: var(--logo-field, transparent); color: var(--logo-primary); isolation: isolate; }
 .scudo-logo--reference { --shirt-final-rotation: 0deg; overflow: hidden; }
 .scudo-logo__shirt { position: absolute; z-index: 0; top: 1px; left: 69%; width: 155px; height: 137px; overflow: visible; opacity: 1; pointer-events: none; transform: translateX(-50%) rotate(var(--shirt-final-rotation, 0deg)); transform-origin: 56% 18%; }
-.scudo-logo__word { position: absolute; z-index: 2; top: 55%; left: 50%; color: var(--logo-primary); font-family: 'Scudo Wordmark', 'Scudo Recoleta', 'Cooper Black', 'Cooper Std Black', Georgia, serif; font-size: 126px; font-weight: 400; font-kerning: none; font-synthesis: none; letter-spacing: -.09em; line-height: .78; white-space: nowrap; transform: translate(-50%, -50%) scaleX(1.02); transform-origin: center; text-shadow: 2px 4px 3px rgba(17, 19, 20, .24); }
+.scudo-logo__word { position: absolute; z-index: 2; top: 55%; left: 50%; color: var(--logo-primary); font-family: 'Scudo Ahsing', 'Scudo Wordmark', 'Scudo Recoleta', 'Cooper Black', 'Cooper Std Black', Georgia, serif; font-size: 126px; font-weight: 400; font-kerning: normal; font-synthesis: none; font-feature-settings: 'kern' 1, 'liga' 1; letter-spacing: -.075em; line-height: .78; white-space: nowrap; transform: translate(-50%, -50%) scaleX(1.02); transform-origin: center; text-shadow: 2px 4px 3px rgba(17, 19, 20, .24); }
 .scudo-logo__letter { display: inline-block; transform-origin: 50% 88%; will-change: transform, opacity, filter; }
 .scudo-logo__letter--s { margin-right: -.005em; }
 .scudo-logo__letter--c { margin-right: -.012em; }
@@ -126,15 +134,15 @@ h1, h2, h3 { font-weight: 400; }
 .scudo-logo--sm .scudo-logo__subtitle { top: 85%; font-size: 6.5px; letter-spacing: .38em; }
 .scudo-logo--reference .scudo-logo__shirt { top: 28px; left: 71%; width: 160px; height: 141px; }
 .scudo-logo--reference .scudo-logo__word { top: 55.5%; left: 50%; color: #fff; transform: translate(-50%, -50%) scaleX(1.06); }
-.scudo-logo--reference .scudo-logo__subtitle { top: 76%; color: #fff; font-size: 8px; letter-spacing: .54em; }
+.scudo-logo--reference .scudo-logo__subtitle { top: 88%; color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .48em; text-shadow: 0 1px 2px rgba(17, 17, 17, .34); }
 .scudo-logo--reference.scudo-logo--sm .scudo-logo__shirt { top: -2px; left: 71%; width: 63px; height: 55px; }
 .scudo-logo--reference.scudo-logo--sm .scudo-logo__word { top: 53%; left: 50%; transform: translate(-50%, -50%) scaleX(1.07); }
-.scudo-logo--reference.scudo-logo--sm .scudo-logo__subtitle { top: 82%; font-size: 5px; letter-spacing: .38em; }
+.scudo-logo--reference.scudo-logo--sm .scudo-logo__subtitle { top: 83%; font-size: 6.5px; letter-spacing: .34em; }
 .scudo-logo--light { --logo-primary: var(--paper); }
 .scudo-logo--mark-only { width: 96px; height: 96px; }
 .scudo-logo--mark-only .scudo-logo__shirt { width: 96px; height: 87px; top: 4px; left: 50%; }
 .scudo-logo--s-only { width: 52px; height: 52px; display: grid; place-items: center; }
-.scudo-logo__s { color: var(--logo-primary); font-family: 'Scudo Wordmark', 'Scudo Recoleta', 'Cooper Black', 'Cooper Std Black', Georgia, serif; font-size: 45px; line-height: 1; }
+.scudo-logo__s { color: var(--logo-primary); font-family: 'Scudo Ahsing', 'Scudo Wordmark', 'Scudo Recoleta', 'Cooper Black', 'Cooper Std Black', Georgia, serif; font-size: 45px; font-weight: 400; font-synthesis: none; line-height: 1; }
 .scudo-logo--horizontal { width: 292px; height: 76px; }
 .scudo-logo--horizontal .scudo-logo__shirt { left: 17%; top: 2px; width: 74px; height: 67px; }
 .scudo-logo--horizontal .scudo-logo__word { top: 47%; left: 58%; font-size: 58px; }
@@ -147,6 +155,7 @@ h1, h2, h3 { font-weight: 400; }
 .brand-intro__wash { position: absolute; z-index: -1; width: min(76vw, 920px); aspect-ratio: 1.55; border-radius: 50%; background: rgba(247,244,238,.1); filter: blur(52px); opacity: 0; transform: scale(.58); }
 .brand-intro__lockup { position: relative; z-index: 3; width: 360px; height: 271px; display: grid; place-items: center; }
 .brand-intro__logo { position: relative; z-index: 3; opacity: 0; transform: scale(.82) translateY(24px); }
+.brand-intro__logo.scudo-logo--reference { background: transparent; }
 .brand-intro__logo .scudo-logo__shirt { opacity: 0; filter: blur(6px); transform: translate(-50%, -40px) rotate(-16deg) scale(.56); transform-origin: 60% 14%; }
 .brand-intro__logo .scudo-logo__shirt-fill { clip-path: inset(0 100% 0 0); }
 .brand-intro__logo .scudo-logo__shirt-outline { opacity: .82; stroke-dasharray: 760; stroke-dashoffset: 760; }
@@ -401,6 +410,12 @@ h1, h2, h3 { font-weight: 400; }
 .shop-heading h1 { margin: 13px 0 0; font-family: var(--display); font-size: clamp(55px, 7vw, 94px); letter-spacing: -.07em; line-height: .9; }
 .shop-heading p { max-width: 230px; margin: 0 0 5px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .shop-toolbar { display: flex; align-items: center; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); min-height: 57px; margin-bottom: 30px; }
+.shop-toolbar--search { display: grid; grid-template-columns: minmax(240px, 420px) 1fr auto; gap: 20px; }
+.catalog-search { min-height: 50px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid transparent; transition: border-color .22s ease; }
+.catalog-search:focus-within { border-color: var(--ink); }
+.catalog-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; padding: 12px 0; color: var(--ink); font: inherit; font-size: 12px; }
+.catalog-search input::placeholder { color: var(--muted); opacity: 1; }
+.catalog-search button { width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
 .product-count { color: var(--muted); font-size: 10px; }
 .sort-select { position: relative; display: flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted); font-size: 10px; }
 .sort-select select { appearance: none; border: 0; background: transparent; color: var(--ink); padding: 10px 23px 10px 0; font-size: 11px; font-weight: 700; outline: 0; }
@@ -606,34 +621,17 @@ h1, h2, h3 { font-weight: 400; }
 .info-hero p { max-width: 490px; color: var(--muted); font-size: 15px; line-height: 1.7; }
 .info-sections { display: grid; grid-template-columns: 1fr 1fr; gap: 35px; border-top: 1px solid var(--line); padding-top: 25px; }
 .info-sections section { max-width: 380px; }.info-sections p { margin: 15px 0 0; font-size: 16px; line-height: 1.65; }
-.about-page .page-shell { max-width: 1440px; }
-.about-page .about-hero { max-width: 900px; padding-bottom: 95px; }
-.about-page .about-hero h1 { max-width: 850px; }
-.about-page .about-hero > p { max-width: 690px; font-size: clamp(17px, 1.7vw, 23px); line-height: 1.55; }
-.about-story { border-top: 1px solid var(--ink); }
-.about-story__section { display: grid; grid-template-columns: minmax(190px, .55fr) minmax(0, 1.45fr); border-bottom: 1px solid var(--line); }
-.about-story__label { padding: 32px 38px 32px 0; }
-.about-story__label > span { color: var(--green); font-size: 9px; font-weight: 700; letter-spacing: .15em; }
-.about-story__label h2 { max-width: 230px; margin: 18px 0 0; font-family: var(--display); font-size: clamp(24px, 2.5vw, 36px); letter-spacing: -.05em; line-height: 1; }
-.about-story__copy { border-left: 1px solid var(--line); padding: 32px 0 32px clamp(30px, 5vw, 75px); }
-.about-story__copy p { max-width: 770px; margin: 0; color: #555149; font-size: clamp(15px, 1.35vw, 18px); line-height: 1.75; }
-.about-story__copy p + p { margin-top: 24px; }
-.about-welcome { max-width: 1050px; margin: clamp(80px, 9vw, 135px) 0; font-family: var(--display); font-size: clamp(45px, 6.3vw, 92px); letter-spacing: -.07em; line-height: .93; }
-.about-welcome em { color: var(--green); font-style: normal; }
-.about-company { display: grid; grid-template-columns: .85fr 1.15fr; gap: clamp(45px, 8vw, 120px); background: var(--ink); color: var(--paper); padding: clamp(40px, 6vw, 85px); }
-.about-company h2 { margin: 21px 0 0; font-family: var(--display); font-size: clamp(34px, 4.5vw, 64px); letter-spacing: -.06em; line-height: .95; }
-.about-company .eyebrow { color: var(--sand); }
-.about-company__details { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-content: end; }
-.about-company__details > div { border-top: 1px solid rgba(247,244,238,.25); padding-top: 17px; }
-.about-company__details span { color: var(--sand); font-size: 9px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
-.about-company__details address, .about-company__details p { margin: 16px 0 0; color: rgba(247,244,238,.76); font-size: 13px; font-style: normal; line-height: 1.75; }
-.about-company__details strong { color: var(--paper); }
-.about-company__details a { color: var(--paper); text-decoration: underline; text-underline-offset: 4px; }
-.about-team-list { display: grid; gap: 13px; margin: 18px 0 19px; }
-.about-team-list > div { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; }
-.about-team-list dt { color: rgba(247,244,238,.48); font-size: 10px; line-height: 1.65; }
-.about-team-list dd { margin: 0; color: var(--paper); font-size: 13px; font-weight: 700; line-height: 1.65; }
-.about-company__email { display: inline-block; font-size: 12px; }
+.about-page { min-height: 70vh; background: #fff; color: #080808; }
+.about-document { width: min(calc(100% - 48px), 1100px); margin: 0 auto; padding: 27px 0 92px; }
+.about-document > h1 { margin: 0 0 26px; font-size: 30px; font-weight: 700; letter-spacing: -.035em; line-height: 1.2; text-align: center; }
+.about-document__copy p { margin: 0 0 27px; font-size: 17.5px; letter-spacing: -.018em; line-height: 1.48; }
+.about-document__company { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .42fr); gap: clamp(70px, 10vw, 145px); margin-top: 7px; }
+.about-document__company section:last-child { justify-self: end; width: min(100%, 315px); }
+.about-document__company h2, .about-document__company h3 { margin: 0; font-family: var(--body); font-size: 16px; font-weight: 500; letter-spacing: -.012em; line-height: 1.45; }
+.about-document__company h3 { margin-top: 14px; }
+.about-document__company address, .about-document__company p { margin: 13px 0 0; font-size: 15px; font-style: normal; letter-spacing: -.012em; line-height: 1.48; }
+.about-document__company a { text-underline-offset: 3px; }
+.about-document__company a:hover, .about-document__company a:focus-visible { text-decoration: underline; }
 .terms-page .page-shell { max-width: 1440px; }
 .terms-page .terms-hero { max-width: 830px; }
 .terms-page .terms-hero > p { max-width: 620px; }
@@ -657,18 +655,13 @@ h1, h2, h3 { font-weight: 400; }
 .privacy-updated::before { width: 24px; height: 1px; background: currentColor; content: ''; }
 .privacy-page .terms-intro { margin-top: 8px; }
 @media (max-width: 740px) {
-  .about-page .about-hero { padding-bottom: 65px; }
-  .about-page .about-hero h1 { font-size: clamp(60px, 19vw, 79px); }
-  .about-page .about-hero > p { font-size: 16px; }
-  .about-story__section { display: block; }
-  .about-story__label { padding: 25px 0 8px; }
-  .about-story__label h2 { margin-top: 11px; font-size: 28px; }
-  .about-story__copy { border-left: 0; padding: 14px 0 29px; }
-  .about-story__copy p { font-size: 15px; line-height: 1.7; }
-  .about-welcome { margin: 75px 0; font-size: clamp(43px, 14vw, 62px); }
-  .about-company { display: block; margin-right: -21px; margin-left: -21px; padding: 50px 21px; }
-  .about-company__details { grid-template-columns: 1fr; margin-top: 48px; }
-  .about-team-list > div { grid-template-columns: 100px minmax(0, 1fr); }
+  .about-document { width: min(calc(100% - 34px), 1100px); padding: 25px 0 65px; }
+  .about-document > h1 { margin-bottom: 23px; font-size: 26px; }
+  .about-document__copy p { margin-bottom: 22px; font-size: 15px; line-height: 1.58; }
+  .about-document__company { grid-template-columns: 1fr; gap: 30px; margin-top: 4px; }
+  .about-document__company section:last-child { justify-self: start; width: 100%; }
+  .about-document__company h2, .about-document__company h3 { font-size: 15px; }
+  .about-document__company address, .about-document__company p { font-size: 14px; line-height: 1.55; }
   .terms-intro { grid-template-columns: 1fr; gap: 28px; }
   .terms-clause { display: block; }
   .terms-clause__heading { padding: 26px 0 9px; }
@@ -1003,7 +996,7 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
   .story-image { min-height: 430px; }.story-copy { min-height: 510px; padding: 64px 21px; }.story-copy h2 { font-size: 52px; }.story-aside { margin-top: 70px; }
   .benefits-section { display: block; padding: 77px 21px; }.benefit-intro { margin-bottom: 45px; }.benefits-section h2 { font-size: 48px; }.benefit { min-height: 155px; padding: 18px 10px 18px 0; }.benefit:nth-child(even) { padding-left: 16px; }.benefit h3 { font-size: 18px; }
   .site-footer { padding: 62px 21px 20px; }.footer-top { display: block; }.footer-links { grid-template-columns: 1fr 1fr; gap: 35px 20px; margin-top: 47px; }.footer-bottom { flex-wrap: wrap; gap: 13px; margin-top: 60px; }.footer-bottom > span:last-child { display: none; }
-  .page-shell { padding: 0 21px; }.breadcrumbs { padding-top: 24px; font-size: 9px; }.shop-heading, .cart-heading { display: block; padding: 55px 0 35px; }.shop-heading h1, .cart-heading h1 { font-size: 63px; }.shop-heading p { margin-top: 17px; }.shop-toolbar { margin-bottom: 21px; }.sort-select label { display: none; }.shop-results--full { padding-bottom: 75px; }
+  .page-shell { padding: 0 21px; }.breadcrumbs { padding-top: 24px; font-size: 9px; }.shop-heading, .cart-heading { display: block; padding: 55px 0 35px; }.shop-heading h1, .cart-heading h1 { font-size: 63px; }.shop-heading p { margin-top: 17px; }.shop-toolbar { margin-bottom: 21px; }.shop-toolbar--search { grid-template-columns: 1fr auto; gap: 0 14px; }.catalog-search { grid-column: 1 / -1; }.sort-select label { display: none; }.shop-results--full { padding-bottom: 75px; }
   .product-detail { display: flex; flex-direction: column; gap: 0; padding-top: 27px; }.product-gallery { width: calc(100% + 42px); margin-left: -21px; }.gallery-main { aspect-ratio: .88; }.gallery-thumbs { grid-template-columns: repeat(2, 67px); padding: 10px 21px 0; }.product-info { padding-top: 53px; }.product-info h1 { font-size: 53px; }.detail-description { font-size: 12px; }.add-row { grid-template-columns: 93px 1fr 44px; }.product-lower { display: block; margin-top: 77px; padding-top: 32px; }.product-lower h2 { font-size: 39px; }.review-content { display: block; }.review-card { margin-bottom: 20px; }.related-section { padding-top: 73px; }
   .cart-layout, .checkout-layout { display: block; padding-bottom: 75px; }.cart-items .cart-line, .cart-line { grid-template-columns: 95px 1fr 20px; gap: 11px; }.cart-items .cart-line img, .cart-line img { width: 95px; height: 120px; }.cart-items .cart-line-info > a, .cart-line-info > a { font-size: 16px; }.cart-layout .order-summary, .checkout-layout .order-summary { margin-top: 42px; }.cart-page .empty-state { min-height: 300px; }
   .checkout-heading { padding: 55px 0 35px; }.checkout-heading h1 { font-size: 57px; }.checkout-layout { display: flex; flex-direction: column-reverse; }.checkout-layout .order-summary { width: 100%; margin-top: 0; }.form-grid, .payment-options { grid-template-columns: 1fr; }.field--wide { grid-column: auto; }
@@ -1816,4 +1809,168 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
   }
   .brand-intro__logo .scudo-logo__shirt { opacity: 1; filter: none; transform: translateX(-50%); }
   .brand-intro__logo .scudo-logo__subtitle { opacity: 1; transform: translateX(-50%); }
+}
+
+/* Account centre: every visible control has a real effect. */
+.auth-reset-link {
+  align-self: flex-end;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.auth-reset-link:hover,
+.auth-reset-link:focus-visible { color: var(--green); }
+.form-success--block,
+.form-error--block { margin: 0; padding: 11px 12px; border: 1px solid currentColor; line-height: 1.5; }
+.form-success--block { background: rgba(33,92,61,.06); }
+
+.account-hub { min-height: 70vh; padding-bottom: 110px; }
+.account-hub__hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
+  gap: clamp(45px, 8vw, 130px);
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+  padding: 72px 0 55px;
+}
+.account-hub__hero h1 {
+  margin: 14px 0 18px;
+  font-family: var(--display);
+  font-size: clamp(56px, 7vw, 104px);
+  font-weight: 900;
+  letter-spacing: -.075em;
+  line-height: .84;
+}
+.account-hub__hero h1 em { color: var(--green); font-style: normal; }
+.account-hub__hero > div:first-child > p { max-width: 430px; color: var(--muted); line-height: 1.65; }
+.account-identity {
+  position: relative;
+  min-height: 210px;
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  align-content: end;
+  gap: 18px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  padding: 25px;
+}
+.account-avatar {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--green);
+  color: var(--paper);
+  font-family: var(--display);
+  font-size: 28px;
+}
+.account-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.account-identity > div:nth-child(2) { min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 5px; }
+.account-identity > div:nth-child(2) span,
+.account-identity > div:nth-child(2) small { color: var(--muted); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+.account-identity > div:nth-child(2) strong { overflow: hidden; font-family: var(--display); font-size: 22px; letter-spacing: -.035em; text-overflow: ellipsis; white-space: nowrap; }
+.account-identity > div:nth-child(2) small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: none; }
+.account-identity > .status-pill { position: absolute; top: 18px; right: 18px; }
+.account-action-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--line); }
+.account-action-card {
+  min-height: 255px;
+  display: grid;
+  grid-template-columns: 35px 1fr auto;
+  align-items: end;
+  gap: 18px;
+  border-right: 1px solid var(--line);
+  color: inherit;
+  padding: 28px 25px;
+  text-decoration: none;
+  transition: background .28s ease, color .28s ease, transform .28s ease;
+}
+.account-action-card:first-child { border-left: 1px solid var(--line); }
+.account-action-card:hover,
+.account-action-card:focus-visible { background: var(--ink); color: var(--paper); transform: translateY(-4px); }
+.account-action-card:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+.account-action-card__number { align-self: start; color: var(--green); font-family: var(--display); font-size: 21px; }
+.account-action-card .eyebrow { display: block; margin-bottom: 11px; }
+.account-action-card h2 { margin: 0 0 10px; font-family: var(--display); font-size: 28px; letter-spacing: -.045em; }
+.account-action-card p { max-width: 280px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.account-action-card:hover p,
+.account-action-card:focus-visible p { color: #c4bfb5; }
+.account-action-card > svg { margin-bottom: 4px; }
+.account-session { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 28px 0; }
+.account-session p { margin: 9px 0 0; color: var(--muted); font-size: 11px; }
+
+.order-card__disclosure { margin: 0; border-top: 1px solid var(--line); color: var(--muted); padding: 18px 26px 20px; font-size: 10px; line-height: 1.55; }
+
+.settings-layout { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.settings-panel { min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--line); background: var(--paper); padding: 27px; }
+.settings-panel__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; border-bottom: 1px solid var(--line); padding-bottom: 20px; }
+.settings-panel__heading > div { display: flex; align-items: baseline; gap: 12px; }
+.settings-panel__heading h2 { margin: 0; font-family: var(--display); font-size: 29px; letter-spacing: -.045em; }
+.settings-index { color: var(--green); font-family: var(--display); font-size: 15px; }
+.settings-panel__intro { max-width: 480px; margin: 20px 0 24px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.settings-panel .field { margin-bottom: 16px; }
+.settings-panel .field input { min-height: 48px; font-size: 12px; }
+.settings-panel .field input[readonly] { background: rgba(185,168,137,.1); color: var(--muted); cursor: not-allowed; }
+.field-help { margin: -4px 0 22px; color: var(--muted); font-size: 9px; line-height: 1.6; }
+.settings-panel__footer { display: flex; align-items: center; justify-content: flex-end; border-top: 1px solid var(--line); margin-top: auto; padding-top: 22px; }
+.settings-fieldset { border: 0; margin: 0 0 26px; padding: 0; }
+.settings-fieldset legend { margin-bottom: 10px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.security-details { margin: 22px 0; }
+.security-details > div { display: grid; grid-template-columns: 140px 1fr; gap: 20px; border-bottom: 1px solid var(--line); padding: 13px 0; }
+.security-details dt { color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.security-details dd { min-width: 0; overflow: hidden; margin: 0; font-size: 11px; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.security-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: auto; }
+.security-actions .field-help { width: 100%; margin: 0; }
+.status-pill--pending { background: rgba(154,90,66,.12); color: #8f523f; }
+.settings-panel--links nav { display: flex; flex-direction: column; margin: 11px 0 24px; }
+.settings-panel--links nav a { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); color: inherit; padding: 14px 0; font-family: var(--display); font-size: 17px; text-decoration: none; }
+.settings-panel--links nav a:hover,
+.settings-panel--links nav a:focus-visible { color: var(--green); }
+.settings-message { margin: -14px 0 22px; border-left: 3px solid var(--green); background: rgba(33,92,61,.07); color: var(--green); padding: 13px 15px; font-size: 10px; line-height: 1.55; }
+.settings-message.is-error { border-color: #9a5a42; background: rgba(154,90,66,.08); color: #9a5a42; }
+
+@media (max-width: 900px) {
+  .account-hub__hero { grid-template-columns: 1fr; }
+  .account-identity { max-width: 520px; }
+  .account-action-grid { grid-template-columns: 1fr; border-top: 1px solid var(--line); }
+  .account-action-card { min-height: 175px; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .settings-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 740px) {
+  .account-hub { padding-bottom: 72px; }
+  .account-hub__hero { gap: 32px; padding: 52px 0 38px; }
+  .account-hub__hero h1 { font-size: 58px; }
+  .account-identity { min-height: 185px; grid-template-columns: 60px 1fr; padding: 20px; }
+  .account-avatar { width: 60px; height: 60px; font-size: 23px; }
+  .account-identity > .status-pill { top: 14px; right: 14px; }
+  .account-action-card { min-height: 155px; grid-template-columns: 28px 1fr auto; padding: 22px 18px; }
+  .account-action-card h2 { font-size: 24px; }
+  .account-session { align-items: stretch; flex-direction: column; }
+  .account-session .button { width: 100%; }
+  .account-page-heading { padding-top: 50px; }
+  .settings-panel { padding: 20px; }
+  .settings-panel__heading { gap: 12px; }
+  .settings-panel__heading h2 { font-size: 24px; }
+  .settings-panel__heading .status-pill { max-width: 112px; text-align: center; }
+  .security-details > div { grid-template-columns: 1fr; gap: 7px; }
+  .security-details dd { text-align: left; }
+  .security-actions { flex-direction: column; }
+  .security-actions .button,
+  .settings-panel__footer .button { width: 100%; }
+}
+
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] *::before,
+:root[data-motion="reduced"] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: .01ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: .01ms !important;
 }

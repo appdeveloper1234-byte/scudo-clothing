@@ -2,7 +2,16 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { products } from './productCatalog.js'
 import { payWithRazorpay } from './razorpay.js'
-import { authenticateWithEmail, firebaseAuthErrorMessage, signInWithGoogle, signOutFirebase, watchFirebaseAuth } from './firebaseAuth.js'
+import {
+  authenticateWithEmail,
+  firebaseAuthErrorMessage,
+  sendFirebasePasswordReset,
+  sendFirebaseVerificationEmail,
+  signInWithGoogle,
+  signOutFirebase,
+  updateFirebaseProfile,
+  watchFirebaseAuth
+} from './firebaseAuth.js'
 import { loadAdminDashboard, updateAdminOrder } from './adminApi.js'
 
 const catalogImages = (slug, count) => Array.from({ length: count }, (_, index) => `/catalog/${slug}/${String(index + 1).padStart(2, '0')}.webp`)
@@ -247,7 +256,7 @@ function useMotionSystem(route) {
   useEffect(() => {
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
     const root = document.documentElement
-    const motionSelector = '.hero-copy, .hero-visual, .campaign-ticker, .section-heading, .campaign-product-lead, .campaign-product-side, .product-card, .editorial-image-section, .collection-card, .story-image, .story-copy, .benefit, .shop-heading, .shop-toolbar, .shop-results, .product-gallery, .gallery-tile, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
+    const motionSelector = '.hero-copy, .hero-visual, .campaign-ticker, .section-heading, .campaign-product-lead, .campaign-product-side, .product-card, .editorial-image-section, .collection-card, .story-image, .story-copy, .benefit, .shop-heading, .shop-toolbar, .shop-results, .product-gallery, .gallery-tile, .product-info, .product-lower, .related-section, .collection-feature, .info-hero, .info-sections section, .about-story__section, .about-quote, .about-company, .account-card, .checkout-heading, .checkout-form, .order-summary, .confirmation-card, .admin-header, .admin-stats > div, .admin-panel'
     const updateScrollState = () => {
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight
       const progress = maxScroll > 0 ? Math.min(1, window.scrollY / maxScroll) : 0
@@ -354,7 +363,7 @@ function Header({ cartCount, wishlistCount, onCartOpen, account }) {
         <nav className="desktop-nav" aria-label="Primary navigation"><Link to="/shop?edit=bestsellers">Bestsellers</Link><Link to="/shop?edit=new-arrivals">New arrivals</Link><Link to="/shop">Shop all</Link><Link to="/collections">Collections</Link><Link to="/about">About</Link></nav>
         <Link to="/" className="header-logo"><ScudoLogo size="sm" showSubtitle /></Link>
         <div className="header-actions">
-          <Link to="/shop" className="icon-button" aria-label="Search"><Icon name="search" /></Link>
+          <Link to="/shop?focus=search" className="icon-button" aria-label="Search products"><Icon name="search" /></Link>
           {account ? <span className="account-menu-shell"><button className={`icon-button header-account account-trigger ${accountMenuOpen ? 'is-open' : ''}`} onClick={() => setAccountMenuOpen((open) => !open)} aria-label={`Account menu for ${account.name}`} aria-haspopup="menu" aria-expanded={accountMenuOpen}><Icon name="user" /><span className="account-status-dot" /></button>{accountMenuOpen && <nav className="account-popover" aria-label="Account navigation" role="menu"><div className="account-popover__intro"><span className="eyebrow">Signed in as</span><strong>{account.name}</strong></div><Link to="/orders" role="menuitem" onClick={() => setAccountMenuOpen(false)}><span>Your orders</span><Icon name="arrow" size={15} /></Link><Link to="/settings" role="menuitem" onClick={() => setAccountMenuOpen(false)}><span>Settings</span><Icon name="arrow" size={15} /></Link><Link to="/contact" role="menuitem" onClick={() => setAccountMenuOpen(false)}><span>Support</span><Icon name="arrow" size={15} /></Link></nav>}</span> : <Link to="/account" className="icon-button header-account" aria-label="Account"><Icon name="user" /></Link>}
           <Link to="/wishlist" className="icon-button with-count" aria-label={`Wishlist, ${wishlistCount} items`}><Icon name="heart" />{wishlistCount > 0 && <span>{wishlistCount}</span>}</Link>
           <button className="icon-button with-count" onClick={onCartOpen} aria-label={`Shopping bag, ${cartCount} items`}><Icon name="bag" />{cartCount > 0 && <span>{cartCount}</span>}</button>
@@ -385,11 +394,6 @@ function Footer() {
   </footer>
 }
 
-function ProductCardLegacy({ product, onQuickAdd, wishlist, onToggleWishlist }) {
-  const isWished = wishlist.includes(product.id)
-  return <article className="product-card"><div className="product-image-wrap"><Link to={`/product/${product.slug}`} className="product-image-link"><img src={product.shopImage || product.images[0]} alt={`${product.name} — ${product.shortDescription}`} loading="lazy" /><span className="product-status">{product.isSoldOut ? 'Sold out' : product.isNew ? 'New' : product.salePrice ? 'Sale' : 'Available'}</span></Link><WishlistButton active={isWished} onClick={() => onToggleWishlist(product.id)} /><button className="quick-add" onClick={() => onQuickAdd(product)} disabled={product.isSoldOut}>{product.isSoldOut ? 'Sold out' : 'Quick add'}<Icon name="plus" size={15} /></button></div><div className="product-meta"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link><div className="product-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><div className="product-detail-line"><span>{product.sizes.length} sizes</span></div></div></article>
-}
-
 function ProductCard({ product, onQuickAdd, wishlist, onToggleWishlist }) {
   const isWished = wishlist.includes(product.id)
   const cardImage = product.shopImage || product.images[0]
@@ -402,8 +406,6 @@ function ProductCard({ product, onQuickAdd, wishlist, onToggleWishlist }) {
   const feedbackClass = feedback === 'idle' ? '' : `is-${feedback}`
   return <article className="product-card"><div className="product-image-wrap"><Link to={`/product/${product.slug}`} className="product-image-link"><CatalogImage className="product-image-main" src={cardImage} alt={`${product.name} product image`} sizes="(max-width: 740px) 50vw, (max-width: 1000px) 33vw, 25vw" loading="lazy" /><span className="product-status">{product.isSoldOut ? 'Sold out' : product.isNew ? 'New' : product.salePrice ? 'Sale' : 'Available'}</span></Link><WishlistButton active={isWished} onClick={() => onToggleWishlist(product.id)} /><button className={`quick-add ${feedbackClass}`} onClick={quickAdd} disabled={product.isSoldOut}>{product.isSoldOut ? 'Sold out' : feedback === 'added' ? 'Added to bag' : feedback === 'signin' ? 'Sign in required' : 'Quick add'}<Icon name={feedback === 'added' ? 'check' : 'plus'} size={15} /></button></div><div className="product-meta"><Link to={`/product/${product.slug}`} className="product-name">{product.name}</Link><div className="product-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><div className="product-detail-line"><span>{product.sizes.length} sizes</span></div></div></article>
 }
-
-function WishlistButtonLegacy({ active, onClick }) { return <button className={`wishlist-button ${active ? 'is-active' : ''}`} onClick={onClick} aria-label={active ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" size={17} /></button> }
 
 function WishlistButton({ active, onClick }) {
   const [bumping, setBumping] = useState(false)
@@ -458,17 +460,27 @@ function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
 
 function ShopPage({ wishlist, onToggleWishlist, onQuickAdd, initialCategory }) {
   const params = new URLSearchParams(window.location.search)
+  const queryString = window.location.search
   const edit = params.get('edit')
   const pageTitle = initialCategory || catalogEditLabels[edit] || 'Shop all'
   const [sort, setSort] = useState(params.get('sort') || 'featured')
+  const [search, setSearch] = useState(params.get('q') || '')
+  const searchRef = useRef(null)
+  useEffect(() => {
+    if (params.get('focus') !== 'search') return undefined
+    const timer = window.setTimeout(() => searchRef.current?.focus(), 280)
+    return () => window.clearTimeout(timer)
+  }, [queryString])
   const visibleProducts = useMemo(() => products.filter((product) => {
     const matchesEdit = !edit || product.edits?.includes(edit)
     const matchesCategory = !initialCategory || product.category === initialCategory
-    return matchesEdit && matchesCategory
-  }).sort((a, b) => sort === 'newest' ? Number(b.isNew) - Number(a.isNew) : sort === 'price-low' ? (a.salePrice || a.price) - (b.salePrice || b.price) : sort === 'price-high' ? (b.salePrice || b.price) - (a.salePrice || a.price) : Number(b.isFeatured) - Number(a.isFeatured)), [initialCategory, sort, edit])
+    const term = search.trim().toLowerCase()
+    const matchesSearch = !term || [product.name, product.category, product.collection, product.shortDescription].filter(Boolean).join(' ').toLowerCase().includes(term)
+    return matchesEdit && matchesCategory && matchesSearch
+  }).sort((a, b) => sort === 'newest' ? Number(b.isNew) - Number(a.isNew) : sort === 'price-low' ? (a.salePrice || a.price) - (b.salePrice || b.price) : sort === 'price-high' ? (b.salePrice || b.price) - (a.salePrice || a.price) : Number(b.isFeatured) - Number(a.isFeatured)), [initialCategory, sort, edit, search])
   return <main className="shop-page"><div className="page-shell"><Breadcrumbs items={[{ label: pageTitle }]} />
     <div className="shop-heading"><div><span className="eyebrow">{edit ? 'Curated team sheet' : initialCategory ? `${initialCategory} rotation` : 'The full rotation'}</span><h1>{pageTitle}</h1></div><p>Official Scudo product photography, organised for quick discovery.</p></div>
-    <div className="shop-toolbar"><span className="product-count">{visibleProducts.length} pieces</span><div className="sort-select"><label htmlFor="sort">Sort by</label><select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="newest">Newest</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option></select><Icon name="chevron" size={14} /></div></div><div className="shop-results shop-results--full">{visibleProducts.length ? <div className="product-grid product-grid--three">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Nothing in this rotation" copy="This edit is being prepared. Explore the full collection in the meantime." action={<Link to="/shop" className="button button-dark">Shop all pieces</Link>} />}</div></div></main>
+    <div className="shop-toolbar shop-toolbar--search"><label className="catalog-search"><Icon name="search" size={16} /><span className="sr-only">Search products</span><input ref={searchRef} type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shirts, teams, collections" autoComplete="off" />{search && <button type="button" onClick={() => { setSearch(''); searchRef.current?.focus() }} aria-label="Clear product search"><Icon name="close" size={14} /></button>}</label><span className="product-count" aria-live="polite">{visibleProducts.length} pieces</span><div className="sort-select"><label htmlFor="sort">Sort by</label><select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="newest">Newest</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option></select><Icon name="chevron" size={14} /></div></div><div className="shop-results shop-results--full">{visibleProducts.length ? <div className="product-grid product-grid--three">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="No pieces match" copy={`No products match “${search}”. Try a team, category, or collection name.`} action={<button type="button" className="button button-dark" onClick={() => setSearch('')}>Clear search</button>} />}</div></div></main>
 }
 
 function EmptyState({ title, copy, action }) { return <div className="empty-state"><div className="empty-mark">SC</div><span className="eyebrow">Nothing here yet</span><h2>{title}</h2><p>{copy}</p>{action}</div> }
@@ -523,9 +535,19 @@ function ProductGallery({ product }) {
 function ProductPage({ product, wishlist, onToggleWishlist, onAddToCart }) {
   const [size, setSize] = useState('')
   const [quantity, setQuantity] = useState(1)
-  const [reviewSent, setReviewSent] = useState(false)
   const [addState, setAddState] = useState('idle')
   const wished = wishlist.includes(product.id)
+
+  useEffect(() => {
+    setSize('')
+    setQuantity(1)
+  }, [product.id])
+
+  useEffect(() => {
+    const button = document.querySelector('.add-to-bag')
+    if (button) button.dataset.status = addState
+  }, [addState])
+
   const add = () => {
     if (!size) {
       setAddState('attention')
@@ -537,8 +559,40 @@ function ProductPage({ product, wishlist, onToggleWishlist, onAddToCart }) {
     window.setTimeout(() => setAddState(result === 'auth-required' ? 'signin' : 'added'), 360)
     window.setTimeout(() => setAddState('idle'), 1700)
   }
-  useEffect(() => { const button = document.querySelector('.add-to-bag'); if (button) button.dataset.status = addState }, [addState])
-  return <main className="product-page"><div className="page-shell"><Breadcrumbs items={[{ label: product.category, path: `/shop/${product.category.toLowerCase().replace(' ', '-')}` }, { label: product.name }]} /><div className="product-detail"><ProductGallery product={product} /><div className="product-info"><span className="eyebrow">{product.collection} / {product.category}</span><h1>{product.name}</h1><div className="detail-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div><p className="detail-description">{product.description}</p><div className="selector-block"><div className="selector-label"><span>Size</span><Link to="/size-guide">Size guide <Icon name="arrow" size={13} /></Link></div><div className="size-grid">{product.sizes.map((item) => <button key={item} className={size === item ? 'is-selected' : ''} onClick={() => setSize(item)}>{item}</button>)}</div>{!size && <span className="selection-note">Select a size to add this piece.</span>}</div><div className="add-row"><div className="quantity-control"><button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button onClick={() => setQuantity(Math.min(product.inventory || 1, quantity + 1))} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div><button className="button button-dark add-to-bag" onClick={add} disabled={!size || product.isSoldOut}>{product.isSoldOut ? 'Sold out' : !size ? 'Select a size' : 'Add to bag'} <Icon name="arrow" size={16} /></button><button className={`icon-button detail-wishlist ${wished ? 'is-active' : ''}`} onClick={() => onToggleWishlist(product.id)} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" /></button></div><div className="detail-notes"><div><span>Shipping</span><p>Flat ₹50 shipping. Ships in 4–15 business days across India.</p></div><div><span>Return policy</span><p>Verified damaged, defective, incorrect, or missing-item claims must be raised within 48 hours.</p></div><div><span>Details</span><p>{product.material}. {product.careInstructions}</p></div></div></div></div><section className="product-lower"><div><span className="eyebrow">Reviews / 03</span><h2>Worn in the wild.</h2></div><div className="review-content"><div className="review-card"><div className="stars">★★★★★</div><p>“Good weight, easy fit. It’s become the jersey I reach for even when there isn’t a game on.”</p><span>— A. Mehta / Verified buyer</span></div><form className="review-form" onSubmit={(event) => { event.preventDefault(); setReviewSent(true) }}><span className="form-title">Leave a review</span><input required placeholder="Your name" aria-label="Your name" /><textarea required placeholder="What did you think?" aria-label="Your review" rows="3" /><button className="button button-ghost" type="submit">{reviewSent ? 'Review submitted' : 'Submit review'}</button></form></div></section><section className="section related-section"><SectionHeading eyebrow="Complete the rotation" title="You may also like" /><div className="product-grid product-grid--four">{products.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} onQuickAdd={(p) => onAddToCart(p, p.sizes[0], p.colors[0], 1)} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section></div></main>
+
+  const relatedProducts = products.filter((item) => item.id !== product.id).slice(0, 4)
+
+  return <main className="product-page"><div className="page-shell">
+    <Breadcrumbs items={[{ label: product.category, path: `/shop/${product.category.toLowerCase().replace(' ', '-')}` }, { label: product.name }]} />
+    <div className="product-detail">
+      <ProductGallery product={product} />
+      <div className="product-info">
+        <span className="eyebrow">{product.collection} / {product.category}</span>
+        <h1>{product.name}</h1>
+        <div className="detail-price">{product.salePrice ? <><span className="sale-price">{formatMoney(product.salePrice)}</span><span className="was-price">{formatMoney(product.price)}</span></> : formatMoney(product.price)}</div>
+        <p className="detail-description">{product.description}</p>
+        <div className="selector-block">
+          <div className="selector-label"><span>Size</span><Link to="/size-guide">Size guide <Icon name="arrow" size={13} /></Link></div>
+          <div className="size-grid">{product.sizes.map((item) => <button type="button" key={item} className={size === item ? 'is-selected' : ''} onClick={() => setSize(item)}>{item}</button>)}</div>
+          {!size && <span className="selection-note">Select a size to add this piece.</span>}
+        </div>
+        <div className="add-row">
+          <div className="quantity-control"><button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button type="button" onClick={() => setQuantity(Math.min(product.inventory || 1, quantity + 1))} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div>
+          <button type="button" className="button button-dark add-to-bag" onClick={add} disabled={!size || product.isSoldOut}>{product.isSoldOut ? 'Sold out' : !size ? 'Select a size' : 'Add to bag'} <Icon name="arrow" size={16} /></button>
+          <button type="button" className={`icon-button detail-wishlist ${wished ? 'is-active' : ''}`} onClick={() => onToggleWishlist(product.id)} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" /></button>
+        </div>
+        <div className="detail-notes"><div><span>Shipping</span><p>Flat ₹50 shipping. Ships in 4–15 business days across India.</p></div><div><span>Return policy</span><p>Verified damaged, defective, incorrect, or missing-item claims must be raised within 48 hours.</p></div><div><span>Details</span><p>{product.material}. {product.careInstructions}</p></div></div>
+      </div>
+    </div>
+    <section className="product-lower product-assurance">
+      <div><span className="eyebrow">Before you buy</span><h2>Right piece.<br />Right fit.</h2></div>
+      <div className="review-content">
+        <div className="review-card"><span className="eyebrow">Fit support</span><p>Compare the garment measurements before ordering. If you are between sizes, ask the Scudo team before checkout.</p><Link to="/size-guide" className="text-link">Open size guide <Icon name="arrow" size={14} /></Link></div>
+        <div className="review-card"><span className="eyebrow">Order support</span><p>Need help with this piece, delivery, or an eligible product issue? Send the product name directly to our support team.</p><Link to="/contact" className="text-link">Contact support <Icon name="arrow" size={14} /></Link></div>
+      </div>
+    </section>
+    <section className="section related-section"><SectionHeading eyebrow="Complete the rotation" title="You may also like" /><div className="product-grid product-grid--four">{relatedProducts.map((item) => <ProductCard key={item.id} product={item} onQuickAdd={(selectedProduct) => onAddToCart(selectedProduct, selectedProduct.sizes[0], selectedProduct.colors[0], 1)} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div></section>
+  </div></main>
 }
 
 function CartDrawer({ open, onClose, cart, onUpdateQuantity, onRemove, onCheckout }) {
@@ -557,8 +611,8 @@ function CartPage({ cart, onUpdateQuantity, onRemove, onCheckout }) {
 
 function OrderSummary({ subtotal, shipping, onCheckout, checkoutLabel = 'Checkout', disabled = false }) { return <aside className="order-summary"><span className="eyebrow">Summary</span><h2>Matchday total</h2><div className="summary-lines"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><div><span>Shipping</span><strong>{formatMoney(shipping)}</strong></div></div><div className="summary-total"><span>Total</span><strong>{formatMoney(subtotal + shipping)}</strong></div><button className="button button-dark" type="button" onClick={onCheckout} disabled={!subtotal || disabled}>{checkoutLabel} <Icon name="arrow" size={16} /></button><p className="secure-note">Totals are verified on our server · payments secured by Razorpay · all sales final.</p></aside> }
 
-function CheckoutPage({ cart, onPlaceOrder }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '', country: 'India', postal: '', terms: false })
+function CheckoutPage({ cart, account, onPlaceOrder }) {
+  const [form, setForm] = useState({ name: account?.name || '', email: account?.email || '', phone: '', address: '', city: '', state: '', country: 'India', postal: '', terms: false })
   const [error, setError] = useState('')
   const [stage, setStage] = useState('idle')
   const paymentLock = useRef(false)
@@ -973,7 +1027,7 @@ function StorePolicyPage({ type }) {
   return <main className="info-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Shipping & returns' }]} /><div className="info-hero"><span className="eyebrow">Customer care</span><h1>Shipping &amp;<br /><em>returns.</em></h1><p>Please review your order, confirm your size, and understand the 48-hour verified-issue claim window before completing your purchase.</p></div><div className="info-sections">{sections.map(([title, copy]) => <section key={title}><span className="eyebrow">{title}</span><p>{copy}</p></section>)}</div><Link className="button button-dark" to="/returns">Read the return policy <Icon name="arrow" size={16} /></Link></div></main>
 }
 
-function AboutPage() {
+function LegacyAboutPage() {
   const story = [
     {
       label: 'About us',
@@ -1016,7 +1070,7 @@ function AboutPage() {
         <div className="info-hero about-hero">
           <span className="eyebrow">The SCUDO team</span>
           <h1>How it <br /><em>started.</em></h1>
-          <p>At SCUDO CLOTHINGS, we&apos;re not just building a brand—we&apos;re building armour for everyday.</p>
+          <p>At SCUDO CLOTHINGS, we&apos;re not just building a brand{'—'}we&apos;re building armour for everyday.</p>
         </div>
         <div className="about-story">
           {story.map((section, index) => (
@@ -1058,6 +1112,46 @@ function AboutPage() {
   )
 }
 
+function AboutPage() {
+  const paragraphs = [
+    <>At SCUDO CLOTHINGS, we&apos;re not just building a brand{'—'}we&apos;re building armour for everyday. Founded in 2026 in Washim, Maharashtra, Scudo Clothings was created with one bold goal: to become the number one name in everyday fashion, loved by Gen Z and worn with pride across the world. From day one, we&apos;ve set out to launch as a global brand, delivering top-quality products, service, and experience to every customer we serve.</>,
+    <>Our journey begins with the game we love. In our first phase, we bring passionate football and sports fans the jerseys that let them wear their colours and cheer for their teams{'—'}from football and cricket to every kind of sports jersey. With signature favourites like our France and Portugal jerseys, crafted in breathable, high-performance fabric, we make it easy for fans aged 12 to 30 to represent the teams and players they live for.</>,
+    <>But this is only the beginning. Selling jerseys is our starting move{'—'}the foundation we&apos;re building on. As we grow and our revenue rises, our vision is to launch our very own customised clothing line: original t-shirts, pants, and everyday apparel designed entirely by us.</>,
+    <>When that day comes, we won&apos;t just sell you clothes{'—'}we&apos;ll show you exactly how they&apos;re made. From the material we choose to how, when, and in what way each piece is crafted, everything will be explained openly on our website, because we believe our customers deserve total transparency.</>,
+    <>What makes Scudo different is simple: this isn&apos;t just a brand{'—'}it&apos;s armour for everyday, designed by the best for the best. We treat every customer like family, and we pour that care into everything we do. Quality, passion, and authenticity are at the heart of every product, and we&apos;re committed to giving you not just great clothing, but a shopping experience that feels genuine and personal.</>,
+    <>As we grow, we&apos;ll keep evolving{'—'}bringing new ideas, new marketing, and new strategies to expand the Scudo family across the globe. Our promise stays the same: to deliver premium products, honest craftsmanship, and an experience worthy of the people who wear us.</>,
+    <>Thank you for being part of the Scudo Clothings journey. This is only the start{'—'}and we can&apos;t wait to grow with you.</>,
+    <>Welcome to SCUDO CLOTHINGS{'—'}armour for everyday.</>
+  ]
+
+  return (
+    <main className="about-page">
+      <article className="about-document" aria-labelledby="about-title">
+        <h1 id="about-title">About Us</h1>
+        <div className="about-document__copy">
+          {paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+        </div>
+        <div className="about-document__company">
+          <section>
+            <h2>SCUDO APPARELS PRIVATE LIMITED</h2>
+            <h3>Registered Office Address</h3>
+            <address>
+              Kharatkar Gali No. 1, Near Ganesh Medical,<br />
+              Rajni Chowk, Shukrawar Peth,<br />
+              Washim, Maharashtra, India {'–'} 444505
+            </address>
+          </section>
+          <section>
+            <h2>Grievance Contact details:</h2>
+            <p>Founder - Saksham Ghope<br />Co-Founder - Samarth Dhekane<br />Management team - Rahul Yadav<br />Shree Lokhande<br />Pavan Bhosale</p>
+            <p>Email: <a href="mailto:scudoclothing@gmail.com">scudoclothing@gmail.com</a></p>
+          </section>
+        </div>
+      </article>
+    </main>
+  )
+}
+
 function InfoPage({ type }) {
   if (type === 'shipping-final-sale' || type === 'terms') return <StorePolicyPage type={type} />
   if (type === 'about') return <AboutPage />
@@ -1074,6 +1168,7 @@ function AuthForm({ onSuccess, compact = false }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [status, setStatus] = useState('idle')
   const submit = async (event) => {
     event.preventDefault()
@@ -1081,6 +1176,7 @@ function AuthForm({ onSuccess, compact = false }) {
     if (mode === 'signup' && !name.trim()) return setError('Please enter your name.')
     if (!email.includes('@') || password.length < 6) return setError('Enter a valid email and a password of at least 6 characters.')
     setError('')
+    setNotice('')
     setStatus('email')
     try {
       onSuccess(await authenticateWithEmail({ mode, name: name.trim(), email: email.trim().toLowerCase(), password }))
@@ -1092,6 +1188,7 @@ function AuthForm({ onSuccess, compact = false }) {
   const googleSignIn = async () => {
     if (status !== 'idle') return
     setError('')
+    setNotice('')
     setStatus('google')
     try {
       onSuccess(await signInWithGoogle())
@@ -1100,8 +1197,34 @@ function AuthForm({ onSuccess, compact = false }) {
       setStatus('idle')
     }
   }
-  const switchMode = () => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setStatus('idle') }
-  return <form className={`auth-form auth-form--${mode} ${compact ? 'auth-form--compact' : ''} ${error ? 'has-error' : ''} ${status !== 'idle' ? 'is-submitting' : ''}`} data-status={status} onSubmit={submit}><button className={`google-auth-button ${status === 'google' ? 'is-loading' : ''}`} type="button" onClick={googleSignIn} disabled={status !== 'idle'}><GoogleIcon /><span>{status === 'google' ? 'Connecting to Google...' : 'Continue with Google'}</span></button><div className="auth-divider"><span>or continue with email</span></div>{mode === 'signup' && <Field label="Full name" value={name} onChange={setName} autoComplete="name" required />}<Field label="Email address" type="email" value={email} onChange={setEmail} autoComplete="email" required /><Field label="Password" type="password" value={password} onChange={setPassword} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />{error && <p className="form-error form-error--block">{error}</p>}<button className="button button-dark auth-submit" type="submit" disabled={status !== 'idle'}>{status === 'email' ? 'Checking...' : mode === 'login' ? 'Log in' : 'Create account'} <Icon name="arrow" size={16} /></button><button className="text-link account-toggle" type="button" onClick={switchMode} disabled={status !== 'idle'}>{mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Log in'}</button></form>
+  const resetPassword = async () => {
+    if (status !== 'idle') return
+    if (!email.includes('@')) return setError('Enter your email address, then choose Forgot password.')
+    setError('')
+    setNotice('')
+    setStatus('reset')
+    try {
+      await sendFirebasePasswordReset(email)
+      setNotice('Password reset email sent. Check your inbox and spam folder.')
+      setStatus('idle')
+    } catch (resetError) {
+      setError(firebaseAuthErrorMessage(resetError, 'email'))
+      setStatus('idle')
+    }
+  }
+  const switchMode = () => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); setNotice(''); setStatus('idle') }
+  return <form className={`auth-form auth-form--${mode} ${compact ? 'auth-form--compact' : ''} ${error ? 'has-error' : ''} ${status !== 'idle' ? 'is-submitting' : ''}`} data-status={status} onSubmit={submit}>
+    <button className={`google-auth-button ${status === 'google' ? 'is-loading' : ''}`} type="button" onClick={googleSignIn} disabled={status !== 'idle'}><GoogleIcon /><span>{status === 'google' ? 'Connecting to Google...' : 'Continue with Google'}</span></button>
+    <div className="auth-divider"><span>or continue with email</span></div>
+    {mode === 'signup' && <Field label="Full name" value={name} onChange={setName} autoComplete="name" required />}
+    <Field label="Email address" type="email" value={email} onChange={setEmail} autoComplete="email" required />
+    <Field label="Password" type="password" value={password} onChange={setPassword} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required />
+    {mode === 'login' && <button className="auth-reset-link" type="button" onClick={resetPassword} disabled={status !== 'idle'}>{status === 'reset' ? 'Sending reset email...' : 'Forgot password?'}</button>}
+    {error && <p className="form-error form-error--block" role="status">{error}</p>}
+    {notice && <p className="form-success form-success--block" role="status">{notice}</p>}
+    <button className="button button-dark auth-submit" type="submit" disabled={status !== 'idle'}>{status === 'email' ? 'Checking...' : mode === 'login' ? 'Log in' : 'Create account'} <Icon name="arrow" size={16} /></button>
+    <button className="text-link account-toggle" type="button" onClick={switchMode} disabled={status !== 'idle'}>{mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Log in'}</button>
+  </form>
 }
 
 function AuthGate({ onClose, onAuthenticated }) {
@@ -1109,22 +1232,98 @@ function AuthGate({ onClose, onAuthenticated }) {
   return <div className="auth-gate-overlay" onClick={onClose}><aside className="auth-gate-card" ref={panelRef} onClick={(event) => event.stopPropagation()} aria-label="Sign in required"><button className="icon-button auth-gate-close" onClick={onClose} aria-label="Close login panel"><Icon name="close" /></button><ScudoLogo size="sm" showSubtitle={false} showShadow={false} /><span className="eyebrow">Members first</span><h2>Sign in to add<br /><em>to your bag.</em></h2><p>Create an account or log in to keep your rotation saved.</p><AuthForm onSuccess={onAuthenticated} compact /></aside></div>
 }
 
-function AccountPage({ account, onAuthenticate, onLogout }) {
-  if (account) return <main className="account-page"><div className="account-card account-card--signed-in"><ScudoLogo size="sm" /><span className="eyebrow">Your Scudo account</span><h1>Welcome back, {account.name}.</h1><p className="account-email">{account.email}</p><button className="button button-ghost" onClick={onLogout}>Log out</button></div></main>
+function AccountPage({ account, order, onAuthenticate, onLogout }) {
+  if (account) {
+    const initials = account.name?.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase() || 'SC'
+    return <main className="account-hub"><div className="page-shell">
+      <Breadcrumbs items={[{ label: 'Account' }]} />
+      <section className="account-hub__hero">
+        <div><span className="eyebrow">Scudo membership</span><h1>Your account,<br /><em>properly organised.</em></h1><p>Manage the details that affect your shopping, security, and support experience.</p></div>
+        <div className="account-identity">
+          <div className="account-avatar">{account.photoURL ? <img src={account.photoURL} alt="" referrerPolicy="no-referrer" /> : initials}</div>
+          <div><span>Signed in as</span><strong>{account.name}</strong><small>{account.email}</small></div>
+          <span className="status-pill">{account.provider === 'google' ? 'Google account' : 'Email account'}</span>
+        </div>
+      </section>
+      <section className="account-action-grid" aria-label="Account actions">
+        <Link to="/orders" className="account-action-card"><span className="account-action-card__number">01</span><div><span className="eyebrow">Purchases</span><h2>Your orders</h2><p>{order ? `Latest order ${order.number || ''} is available on this device.` : 'No completed order is saved on this device yet.'}</p></div><Icon name="arrow" size={19} /></Link>
+        <Link to="/settings" className="account-action-card"><span className="account-action-card__number">02</span><div><span className="eyebrow">Account</span><h2>Settings</h2><p>Update your profile, sign-in security, and customer-care links.</p></div><Icon name="arrow" size={19} /></Link>
+        <Link to="/contact" className="account-action-card"><span className="account-action-card__number">03</span><div><span className="eyebrow">Customer care</span><h2>Get support</h2><p>Contact the Scudo team about an order, payment, delivery, or product.</p></div><Icon name="arrow" size={19} /></Link>
+      </section>
+      <section className="account-session"><div><span className="eyebrow">Current session</span><p>Your account is secured by {account.provider === 'google' ? 'Google and Firebase Authentication' : 'Firebase Authentication'}.</p></div><button className="button button-ghost" type="button" onClick={onLogout}>Log out</button></section>
+    </div></main>
+  }
   return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">Welcome back</span><h1>Log in to your account.</h1><AuthForm onSuccess={onAuthenticate} /></div></main>
 }
 
 function OrdersPage({ account, order }) {
-  if (!account) return <main className="account-page"><div className="account-card"><span className="eyebrow">Members first</span><h1>Log in to see your orders.</h1><p className="demo-note">Your order history will appear here after you sign in.</p><Link to="/account" className="button button-dark">Log in <Icon name="arrow" size={16} /></Link></div></main>
-  return <main className="orders-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Your orders' }]} /><div className="account-page-heading"><span className="eyebrow">Your rotation</span><h1>Orders.</h1><p>Every piece you’ve added to the journey.</p></div>{order ? <article className="order-card"><div className="order-card__head"><div><span className="eyebrow">Order {order.number}</span><h2>{order.payment?.status === 'Paid' ? 'Payment verified.' : 'Payment processing.'}</h2></div><span className="status-pill">{order.payment?.status || 'Processing'}</span></div><div className="order-card__meta"><div><span>Date</span><strong>{new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN')}</strong></div><div><span>Ship to</span><strong>{order.city || 'Your city'}, {order.country || 'India'}</strong></div><div><span>Total</span><strong>{formatMoney(order.total || 0)}</strong></div></div><div className="order-card__items">{order.items?.map((item) => <div key={item.key || item.product.id}><img src={item.product.images[0]} alt="" /><div><strong>{item.product.name}</strong><span>{item.color} / {item.size} · Qty {item.quantity}</span></div><b>{formatMoney((item.product.salePrice || item.product.price) * item.quantity)}</b></div>)}</div></article> : <EmptyState title="No orders yet" copy="Your first Scudo order will appear here after checkout." action={<Link to="/shop" className="button button-dark">Shop the rotation <Icon name="arrow" size={16} /></Link>} />}</div></main>
+  if (!account) return <main className="account-page"><div className="account-card"><span className="eyebrow">Members first</span><h1>Log in to see your orders.</h1><p className="demo-note">Sign in to view the latest order saved in this browser.</p><Link to="/account" className="button button-dark">Log in <Icon name="arrow" size={16} /></Link></div></main>
+  return <main className="orders-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Your orders' }]} /><div className="account-page-heading"><span className="eyebrow">Latest purchase</span><h1>Orders.</h1><p>This page currently shows the latest completed order saved on this device.</p></div>{order ? <article className="order-card"><div className="order-card__head"><div><span className="eyebrow">Order {order.number}</span><h2>{order.payment?.status === 'Paid' ? 'Payment verified.' : 'Payment processing.'}</h2></div><span className="status-pill">{order.payment?.status || 'Processing'}</span></div><div className="order-card__meta"><div><span>Date</span><strong>{new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN')}</strong></div><div><span>Ship to</span><strong>{order.city || 'Your city'}, {order.country || 'India'}</strong></div><div><span>Total</span><strong>{formatMoney(order.total || 0)}</strong></div></div><div className="order-card__items">{order.items?.map((item) => <div key={item.key || item.product.id}><CatalogImage src={item.product.images[0]} alt="" sizes="64px" /><div><strong>{item.product.name}</strong><span>{item.size} · Qty {item.quantity}</span></div><b>{formatMoney((item.product.salePrice || item.product.price) * item.quantity)}</b></div>)}</div><p className="order-card__disclosure">For a complete payment or delivery record, contact support with this order number.</p></article> : <EmptyState title="No orders yet" copy="Your first completed Scudo order will appear here after checkout." action={<Link to="/shop" className="button button-dark">Shop the rotation <Icon name="arrow" size={16} /></Link>} />}</div></main>
 }
 
-function SettingsPage({ account }) {
-  const [saved, setSaved] = useState(false)
+function SettingsPage({ account, onSaveProfile, onSendPasswordReset, onSendVerification, onLogout }) {
   const [name, setName] = useState(account?.name || '')
-  const [email, setEmail] = useState(account?.email || '')
+  const [profileState, setProfileState] = useState('idle')
+  const [securityState, setSecurityState] = useState('idle')
+  const [message, setMessage] = useState('')
+  useEffect(() => { setName(account?.name || '') }, [account?.name])
   if (!account) return <main className="account-page"><div className="account-card"><span className="eyebrow">Members first</span><h1>Log in to manage settings.</h1><Link to="/account" className="button button-dark">Log in <Icon name="arrow" size={16} /></Link></div></main>
-  return <main className="settings-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Settings' }]} /><div className="account-page-heading"><span className="eyebrow">Account preferences</span><h1>Settings.</h1><p>Keep your Scudo details current.</p></div><form className="settings-card" onSubmit={(event) => { event.preventDefault(); setSaved(true); window.setTimeout(() => setSaved(false), 1800) }}><label className="field"><span>Full name</span><input value={name} onChange={(event) => setName(event.target.value)} /></label><label className="field"><span>Email address</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><div className="settings-card__footer"><button className="button button-dark" type="submit">{saved ? 'Saved' : 'Save changes'} <Icon name={saved ? 'check' : 'arrow'} size={16} /></button></div></form></div></main>
+  const saveProfile = async (event) => {
+    event.preventDefault()
+    setMessage('')
+    setProfileState('saving')
+    try {
+      await onSaveProfile(name)
+      setProfileState('saved')
+      window.setTimeout(() => setProfileState('idle'), 1800)
+    } catch (error) {
+      setMessage(firebaseAuthErrorMessage(error, 'email'))
+      setProfileState('error')
+    }
+  }
+  const runSecurityAction = async (action, successMessage) => {
+    setMessage('')
+    setSecurityState('working')
+    try {
+      await action()
+      setMessage(successMessage)
+      setSecurityState('sent')
+    } catch (error) {
+      setMessage(firebaseAuthErrorMessage(error, 'email'))
+      setSecurityState('error')
+    }
+  }
+  const providerLabel = account.provider === 'google' ? 'Google' : 'Email and password'
+  return <main className="settings-page"><div className="page-shell">
+    <Breadcrumbs items={[{ label: 'Settings' }]} />
+    <div className="account-page-heading"><span className="eyebrow">Account controls</span><h1>Settings.</h1><p>Manage your profile, sign-in security, and customer-care links.</p></div>
+    {message && <p className={`settings-message ${profileState === 'error' || securityState === 'error' ? 'is-error' : ''}`} role="status">{message}</p>}
+    <div className="settings-layout">
+      <form className="settings-panel" onSubmit={saveProfile}>
+        <div className="settings-panel__heading"><div><span className="settings-index">01</span><h2>Profile</h2></div><span className="status-pill">Firebase secured</span></div>
+        <p className="settings-panel__intro">Your display name appears across your Scudo account.</p>
+        <label className="field"><span>Full name</span><input value={name} onChange={(event) => setName(event.target.value)} minLength="2" maxLength="80" autoComplete="name" required /></label>
+        <label className="field"><span>Email address</span><input type="email" value={account.email} readOnly aria-describedby="email-help" /></label>
+        <p className="field-help" id="email-help">Your sign-in email is managed securely by {providerLabel}. Contact support if it must be changed.</p>
+        <div className="settings-panel__footer"><button className="button button-dark" type="submit" disabled={profileState === 'saving' || name.trim() === account.name}>{profileState === 'saving' ? 'Saving...' : profileState === 'saved' ? 'Profile saved' : 'Save profile'} <Icon name={profileState === 'saved' ? 'check' : 'arrow'} size={16} /></button></div>
+      </form>
+
+      <section className="settings-panel">
+        <div className="settings-panel__heading"><div><span className="settings-index">02</span><h2>Sign-in &amp; security</h2></div><span className={`status-pill ${account.emailVerified ? '' : 'status-pill--pending'}`}>{account.emailVerified ? 'Email verified' : 'Verification needed'}</span></div>
+        <dl className="security-details"><div><dt>Sign-in method</dt><dd>{providerLabel}</dd></div><div><dt>Email</dt><dd>{account.email}</dd></div></dl>
+        <div className="security-actions">
+          {!account.emailVerified && <button className="button button-ghost" type="button" disabled={securityState === 'working'} onClick={() => runSecurityAction(onSendVerification, 'Verification email sent. Open it from the same device to verify your address.')}>Send verification email</button>}
+          {account.provider !== 'google' ? <button className="button button-ghost" type="button" disabled={securityState === 'working'} onClick={() => runSecurityAction(onSendPasswordReset, 'Password reset email sent. Check your inbox and spam folder.')}>Reset password</button> : <p className="field-help">Password and two-step verification are managed in your Google Account.</p>}
+        </div>
+      </section>
+
+      <section className="settings-panel settings-panel--links">
+        <div className="settings-panel__heading"><div><span className="settings-index">03</span><h2>Help &amp; policies</h2></div></div>
+        <nav aria-label="Account help"><Link to="/contact">Contact support <Icon name="arrow" size={15} /></Link><Link to="/orders">Latest order <Icon name="arrow" size={15} /></Link><Link to="/returns">Return policy <Icon name="arrow" size={15} /></Link><Link to="/privacy">Privacy policy <Icon name="arrow" size={15} /></Link><Link to="/terms">Terms &amp; conditions <Icon name="arrow" size={15} /></Link></nav>
+        <div className="settings-panel__footer"><button className="button button-ghost" type="button" onClick={onLogout}>Log out of this device</button></div>
+      </section>
+    </div>
+  </div></main>
 }
 
 function AdminOrderEditor({ order, onSave }) {
@@ -1214,12 +1413,19 @@ export default function App() {
   const [pendingAdd, setPendingAdd] = useState(null)
   const [order, setOrder] = usePersistedState('scudo-last-order', null)
   useEffect(() => watchFirebaseAuth(setAccount), [setAccount])
+  useEffect(() => {
+    window.localStorage.removeItem('scudo-preferences')
+    delete document.documentElement.dataset.motion
+  }, [])
   useEffect(() => { document.title = path === '/' ? 'Scudo Clothing — Football-inspired streetwear' : `${path.replace('/', '').replaceAll('/', ' / ')} — Scudo Clothing` }, [route, path])
   const toggleWishlist = (id) => setWishlist((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
   const addToCartNow = (product, size, color, quantity = 1) => { const key = `${product.id}-${size}-${color}`; setCart((current) => { const existing = current.find((item) => item.key === key); return existing ? current.map((item) => item.key === key ? { ...item, quantity: item.quantity + quantity } : item) : [...current, { key, product, size, color, quantity }] }); setCartOpen(true); return 'added' }
   const addToCart = (product, size, color, quantity = 1) => { if (!account) { setPendingAdd({ product, size, color, quantity }); setAuthPrompt(true); return 'auth-required' }; return addToCartNow(product, size, color, quantity) }
   const authenticate = (profile) => { setAccount(profile); setAuthPrompt(false); if (pendingAdd) { addToCartNow(pendingAdd.product, pendingAdd.size, pendingAdd.color, pendingAdd.quantity); setPendingAdd(null) } }
   const logout = async () => { await signOutFirebase(); setAccount(null) }
+  const saveProfile = async (name) => { const profile = await updateFirebaseProfile({ name }); setAccount(profile); return profile }
+  const sendPasswordReset = () => sendFirebasePasswordReset(account?.email)
+  const sendVerification = () => sendFirebaseVerificationEmail()
   const closeAuthPrompt = () => { setAuthPrompt(false); setPendingAdd(null) }
   const updateQuantity = (key, quantity) => setCart((current) => quantity < 1 ? current.filter((item) => item.key !== key) : current.map((item) => item.key === key ? { ...item, quantity } : item))
   const removeCartItem = (key) => setCart((current) => current.filter((item) => item.key !== key))
@@ -1242,11 +1448,11 @@ export default function App() {
   else if (path === '/returns') content = <InfoPage type="returns" />
   else if (path === '/wishlist') content = <WishlistPage wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
   else if (path === '/cart') content = <CartPage cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => navigate('/checkout')} />
-  else if (path === '/checkout') content = <CheckoutPage cart={cart} onPlaceOrder={placeOrder} />
+  else if (path === '/checkout') content = <CheckoutPage cart={cart} account={account} onPlaceOrder={placeOrder} />
   else if (path === '/order-confirmation') content = <OrderConfirmation order={order} />
-  else if (path === '/account') content = <AccountPage account={account} onAuthenticate={authenticate} onLogout={logout} />
+  else if (path === '/account') content = <AccountPage account={account} order={order} onAuthenticate={authenticate} onLogout={logout} />
   else if (path === '/orders') content = <OrdersPage account={account} order={order} />
-  else if (path === '/settings') content = <SettingsPage account={account} />
+  else if (path === '/settings') content = <SettingsPage account={account} onSaveProfile={saveProfile} onSendPasswordReset={sendPasswordReset} onSendVerification={sendVerification} onLogout={logout} />
   else if (path === '/admin') content = <AdminPage account={account} onAuthenticate={authenticate} onLogout={logout} />
   else content = <InfoPage type="about" />
   return <div className={`app ${showIntro ? 'app--intro' : ''}`}><span className="scroll-progress" aria-hidden="true" /><Header cartCount={cartCount} wishlistCount={wishlist.length} account={account} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>

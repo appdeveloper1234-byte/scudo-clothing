@@ -5,6 +5,8 @@ import {
   getAuth,
   GoogleAuthProvider,
   onAuthStateChanged,
+  sendEmailVerification,
+  sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -60,7 +62,9 @@ const profileFromUser = (user) => ({
   uid: user.uid,
   name: user.displayName || user.email?.split('@')[0] || 'Scudo member',
   email: user.email || '',
+  emailVerified: Boolean(user.emailVerified),
   photoURL: user.photoURL || '',
+  providers: user.providerData?.map((provider) => provider.providerId).filter(Boolean) || [],
   provider: user.providerData?.some((provider) => provider.providerId === 'google.com') ? 'google' : 'email'
 })
 
@@ -100,6 +104,44 @@ export async function signOutFirebase() {
   if (firebaseAuth?.currentUser) await signOut(firebaseAuth)
 }
 
+export async function updateFirebaseProfile({ name }) {
+  const auth = requireFirebaseAuth()
+  if (!auth.currentUser) {
+    const error = new Error('Sign in is required.')
+    error.code = 'auth/requires-sign-in'
+    throw error
+  }
+  const displayName = String(name || '').trim()
+  if (displayName.length < 2 || displayName.length > 80) {
+    const error = new Error('Enter a name between 2 and 80 characters.')
+    error.code = 'auth/invalid-display-name'
+    throw error
+  }
+  await updateProfile(auth.currentUser, { displayName })
+  return profileFromUser(auth.currentUser)
+}
+
+export async function sendFirebasePasswordReset(email) {
+  const auth = requireFirebaseAuth()
+  const address = String(email || auth.currentUser?.email || '').trim().toLowerCase()
+  if (!address) {
+    const error = new Error('Enter your email address first.')
+    error.code = 'auth/missing-email'
+    throw error
+  }
+  await sendPasswordResetEmail(auth, address)
+}
+
+export async function sendFirebaseVerificationEmail() {
+  const auth = requireFirebaseAuth()
+  if (!auth.currentUser) {
+    const error = new Error('Sign in is required.')
+    error.code = 'auth/requires-sign-in'
+    throw error
+  }
+  if (!auth.currentUser.emailVerified) await sendEmailVerification(auth.currentUser)
+}
+
 export async function getFirebaseIdToken(forceRefresh = false) {
   const auth = requireFirebaseAuth()
   if (!auth.currentUser) {
@@ -129,7 +171,10 @@ export function firebaseAuthErrorMessage(error, method = 'google') {
     'auth/invalid-email': 'Enter a valid email address.',
     'auth/invalid-credential': 'The email address or password is incorrect.',
     'auth/weak-password': 'Use a stronger password with at least six characters.',
-    'auth/too-many-requests': 'Too many sign-in attempts. Please wait and try again.'
+    'auth/too-many-requests': 'Too many sign-in attempts. Please wait and try again.',
+    'auth/requires-sign-in': 'Your session has expired. Sign in again to continue.',
+    'auth/invalid-display-name': 'Enter a name between 2 and 80 characters.',
+    'auth/missing-email': 'Enter your email address first.'
   }
   const code = typeof error?.code === 'string' ? error.code : 'unknown-error'
   return messages[code] || `${method === 'google' ? 'Google sign-in' : 'Account authentication'} could not be completed (${code}). Please try again.`
