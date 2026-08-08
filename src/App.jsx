@@ -1445,12 +1445,19 @@ function AdminOrderEditor({ order, onSave }) {
   return <article className="admin-order-card"><div className="admin-order-card__head"><div><span className="eyebrow">{order.receipt || order.orderId}</span><h3>{order.customer.name || 'Customer'}</h3></div><span className={`status-pill status-pill--${order.paymentStatus}`}>{order.paymentStatus}</span></div><div className="admin-order-card__meta"><span>{new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN')}</span><span>{order.customer.email}</span><strong>{formatMoney((order.amount || 0) / 100)}</strong></div><div className="admin-order-card__items">{order.lineItems.map((item) => <span key={`${order.orderId}-${item.productId}-${item.size}`}>{item.quantity} × {item.name} / {item.size}</span>)}</div><p>{[order.customer.address, order.customer.address2, order.customer.landmark && `Landmark: ${order.customer.landmark}`, order.customer.city, order.customer.state, order.customer.postal].filter(Boolean).join(', ')}</p><form className="admin-order-card__form" onSubmit={submit}><label><span>Fulfilment</span><select value={fulfilmentStatus} onChange={(event) => setFulfilmentStatus(event.target.value)}><option value="unfulfilled">Unfulfilled</option><option value="packing">Packing</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label><label><span>Tracking reference</span><input value={trackingNumber} onChange={(event) => setTrackingNumber(event.target.value)} maxLength="100" placeholder="Optional" /></label><button className="button button-dark" type="submit" disabled={state === 'saving'}>{state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved' : 'Save'} <Icon name={state === 'saved' ? 'check' : 'arrow'} size={14} /></button></form>{state === 'error' && <span className="form-error">This update could not be saved. Refresh and try again.</span>}</article>
 }
 
-function AdminPage({ account, onAuthenticate, onLogout }) {
+function AdminPage({ account, authReady, onAuthenticate, onLogout }) {
   const [dashboard, setDashboard] = useState(null)
-  const [status, setStatus] = useState(account ? 'loading' : 'idle')
+  const [status, setStatus] = useState(authReady && !account ? 'idle' : 'loading')
   const [error, setError] = useState('')
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
+    if (!authReady) {
+      setDashboard(null)
+      setStatus('loading')
+      setError('')
+      return undefined
+    }
     if (!account) {
       setDashboard(null)
       setStatus('idle')
@@ -1460,7 +1467,7 @@ function AdminPage({ account, onAuthenticate, onLogout }) {
     let cancelled = false
     setStatus('loading')
     setError('')
-    loadAdminDashboard().then((payload) => {
+    loadAdminDashboard(true).then((payload) => {
       if (cancelled) return
       setDashboard(payload)
       setStatus('ready')
@@ -1470,16 +1477,16 @@ function AdminPage({ account, onAuthenticate, onLogout }) {
       setStatus('error')
     })
     return () => { cancelled = true }
-  }, [account?.uid])
+  }, [account?.uid, authReady, reloadKey])
 
   const saveOrder = async (changes) => {
     const payload = await updateAdminOrder(changes)
     setDashboard((current) => current ? { ...current, orders: current.orders.map((item) => item.orderId === payload.order.orderId ? payload.order : item) } : current)
   }
 
-  if (!account) return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">Authorized team only</span><h1>Store administration.</h1><p>Sign in with an email listed in the secure admin configuration.</p><AuthForm onSuccess={onAuthenticate} /></div></main>
-  if (status === 'loading') return <main className="admin-page"><div className="page-shell"><div className="admin-state"><span className="eyebrow">Scudo / Store admin</span><h1>Verifying access…</h1><p>Checking your Firebase session and admin permissions.</p></div></div></main>
-  if (status === 'error') return <main className="admin-page"><div className="page-shell"><div className="admin-state admin-state--error"><span className="eyebrow">Access unavailable</span><h1>Admin access was not granted.</h1><p>{error}</p><div><Link to="/" className="button button-dark">Return to store</Link><button className="button button-ghost" onClick={onLogout}>Use another account</button></div></div></div></main>
+  if (!authReady || status === 'loading') return <main className="admin-page"><div className="page-shell"><div className="admin-state"><span className="eyebrow">Scudo / Store admin</span><h1>Verifying access…</h1><p>Checking your Firebase session and admin permissions.</p></div></div></main>
+  if (!account) return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">Authorized team only</span><h1>Store administration.</h1><p>Sign in with a verified email listed in the secure admin configuration.</p><AuthForm onSuccess={onAuthenticate} /></div></main>
+  if (status === 'error') return <main className="admin-page"><div className="page-shell"><div className="admin-state admin-state--error"><span className="eyebrow">Access unavailable</span><h1>Admin access was not granted.</h1><p>{error}</p><div><button className="button button-dark" type="button" onClick={() => setReloadKey((value) => value + 1)}>Retry access</button><button className="button button-ghost" type="button" onClick={onLogout}>Use another account</button></div></div></div></main>
 
   const stats = [
     ['Total orders', dashboard.stats.totalOrders, 'all recorded orders'],
@@ -1501,6 +1508,7 @@ export default function App() {
   const [wishlist, setWishlist] = usePersistedState('scudo-wishlist', [])
   const [cart, setCart] = usePersistedState('scudo-cart', [])
   const [account, setAccount] = usePersistedState('scudo-account', null)
+  const [authReady, setAuthReady] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [authPrompt, setAuthPrompt] = useState(false)
   const [profileSetupOpen, setProfileSetupOpen] = useState(false)
@@ -1513,18 +1521,21 @@ export default function App() {
       if (!firebaseProfile) {
         setAccount(null)
         setProfileSetupOpen(false)
+        setAuthReady(true)
         return
       }
       const profile = await loadCustomerProfile(firebaseProfile)
       if (!active) return
       setAccount(profile)
-      setProfileSetupOpen(!isCustomerProfileComplete(profile))
+      setProfileSetupOpen(path !== '/admin' && !isCustomerProfileComplete(profile))
+      setAuthReady(true)
     })
     return () => { active = false; unsubscribe() }
-  }, [setAccount])
+  }, [path, setAccount])
   useEffect(() => {
-    if (account?.uid && !isCustomerProfileComplete(account)) setProfileSetupOpen(true)
-  }, [account])
+    if (path === '/admin') setProfileSetupOpen(false)
+    else if (account?.uid && !isCustomerProfileComplete(account)) setProfileSetupOpen(true)
+  }, [account, path])
   useEffect(() => {
     window.localStorage.removeItem('scudo-preferences')
     delete document.documentElement.dataset.motion
@@ -1547,7 +1558,7 @@ export default function App() {
     const profile = await loadCustomerProfile(firebaseProfile)
     setAccount(profile)
     if (!isCustomerProfileComplete(profile)) {
-      setProfileSetupOpen(true)
+      if (path !== '/admin') setProfileSetupOpen(true)
       return profile
     }
     finishPendingAdd()
@@ -1595,7 +1606,7 @@ export default function App() {
   else if (path === '/account') content = <AccountPage account={account} order={order} onAuthenticate={authenticate} onLogout={logout} />
   else if (path === '/orders') content = <OrdersPage account={account} order={order} />
   else if (path === '/settings') content = <SettingsPage account={account} onSaveProfile={saveProfile} onSendPasswordReset={sendPasswordReset} onSendVerification={sendVerification} onLogout={logout} />
-  else if (path === '/admin') content = <AdminPage account={account} onAuthenticate={authenticate} onLogout={logout} />
+  else if (path === '/admin') content = <AdminPage account={account} authReady={authReady} onAuthenticate={authenticate} onLogout={logout} />
   else content = <InfoPage type="about" />
-  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><span className="scroll-progress" aria-hidden="true" /><Header cartCount={cartCount} wishlistCount={wishlist.length} account={account} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{profileSetupOpen && account && !showIntro && <DeliveryProfileSetup account={account} onSave={completeProfileSetup} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
+  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><span className="scroll-progress" aria-hidden="true" /><Header cartCount={cartCount} wishlistCount={wishlist.length} account={account} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{profileSetupOpen && path !== '/admin' && account && !showIntro && <DeliveryProfileSetup account={account} onSave={completeProfileSetup} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
 }

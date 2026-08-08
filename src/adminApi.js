@@ -15,15 +15,27 @@ async function adminRequest(options = {}) {
     method: options.method || 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
       ...(options.body ? { 'Content-Type': 'application/json' } : {})
     },
     body: options.body ? JSON.stringify(options.body) : undefined,
     credentials: 'same-origin'
   })
+  const contentType = response.headers.get('content-type') || ''
+  const isJson = contentType.includes('application/json')
+  if (!isJson) {
+    const message = response.status === 502
+      ? 'The admin service failed to start. Check the latest Netlify function deploy and Firebase Admin environment variables.'
+      : 'The admin API route returned a webpage instead of JSON. Check the Netlify function deployment.'
+    throw new AdminApiError('ADMIN_ROUTE_UNAVAILABLE', message, response.status)
+  }
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
     const error = payload?.error || {}
-    throw new AdminApiError(error.code || 'ADMIN_REQUEST_FAILED', error.message || 'The admin service could not complete this request.', response.status)
+    const fallback = response.status === 502
+      ? 'The admin service failed to start. Check the latest Netlify function deploy and Firebase Admin environment variables.'
+      : 'The admin service could not complete this request.'
+    throw new AdminApiError(error.code || 'ADMIN_REQUEST_FAILED', error.message || fallback, response.status)
   }
   return payload
 }

@@ -96,7 +96,10 @@ export async function authenticateWithEmail({ mode, name, email, password }) {
 }
 
 export function watchFirebaseAuth(callback) {
-  if (!firebaseAuth) return () => {}
+  if (!firebaseAuth) {
+    callback(null)
+    return () => {}
+  }
   return onAuthStateChanged(firebaseAuth, (user) => callback(user ? profileFromUser(user) : null))
 }
 

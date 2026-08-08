@@ -69,8 +69,11 @@ export async function requireAdmin(request) {
     .split(',')
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean))
-  const authorized = decoded.admin === true || (decoded.email_verified === true && allowedEmails.has(email))
-  if (!authorized) throw new HttpError(403, 'ADMIN_ACCESS_DENIED', 'This account does not have Scudo admin access.')
+  if (decoded.admin !== true) {
+    if (!allowedEmails.size) throw new HttpError(503, 'ADMIN_ACCESS_NOT_CONFIGURED', 'Admin access is not configured. Add ADMIN_EMAILS in Netlify and redeploy.')
+    if (!allowedEmails.has(email)) throw new HttpError(403, 'ADMIN_ACCESS_DENIED', 'This account is not listed for Scudo admin access.')
+    if (decoded.email_verified !== true) throw new HttpError(403, 'ADMIN_EMAIL_NOT_VERIFIED', 'Verify this email address, then retry admin access.')
+  }
 
   return {
     uid: user.uid,
