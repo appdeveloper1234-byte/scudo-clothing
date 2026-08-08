@@ -174,8 +174,8 @@ function BrandIntro({ onComplete }) {
     const start = async () => {
       try {
         await Promise.race([
-          document.fonts?.load('400 126px "Scudo Wordmark"') || Promise.resolve(),
-          new Promise((resolve) => window.setTimeout(resolve, 280))
+          document.fonts?.load('400 126px "Scudo Ahsing"', 'scudo') || Promise.resolve(),
+          new Promise((resolve) => window.setTimeout(resolve, 1200))
         ])
       } catch {}
       if (cancelled) return
@@ -394,7 +394,6 @@ function Header({ cartCount, wishlistCount, onCartOpen, account }) {
 
 function Footer() {
   return <footer className="site-footer">
-    <div className="footer-wordmark" aria-hidden="true"><span>scudo</span><small>Clothings / India</small></div>
     <div className="footer-top">
       <div className="footer-brand">
         <ScudoLogo variant="reference" size="sm" />
@@ -1574,7 +1573,7 @@ function AdminCatalogManager({ catalog, onSave, onArchive, onUpload }) {
 
       <section className="admin-editor-section"><div className="admin-editor-section__title"><span>04</span><div><h3>Pricing & inventory</h3><p>Prices are in Indian rupees and are revalidated by the payment server.</p></div></div><div className="admin-catalog-form-grid"><AdminCatalogField label="Regular price (₹)" type="number" min="1" step="1" value={draft.price ?? ''} onChange={(event) => update('price', event.target.value)} required /><AdminCatalogField label="Discounted price (₹)" type="number" min="1" step="1" value={draft.salePrice ?? ''} onChange={(event) => update('salePrice', event.target.value)} placeholder="Optional" /><AdminCatalogField label="Inventory" type="number" min="0" max="100000" step="1" value={draft.inventory ?? 0} onChange={(event) => update('inventory', event.target.value)} required /><AdminCatalogField label="Status" as="select" value={draft.status || 'active'} onChange={(event) => update('status', event.target.value)}><option value="active">Active</option><option value="archived">Archived</option></AdminCatalogField></div></section>
 
-      <section className="admin-editor-section"><div className="admin-editor-section__title"><span>05</span><div><h3>Variants & merchandising</h3><p>Comma-separate sizes, colours, and edit tags.</p></div></div><div className="admin-catalog-form-grid"><AdminCatalogField label="Sizes" value={adminListValue(draft.sizes)} onChange={(event) => update('sizes', event.target.value)} placeholder="S, M, L, XL" required /><AdminCatalogField label="Colours" value={adminListValue(draft.colors)} onChange={(event) => update('colors', event.target.value)} placeholder="Black, Stone" required /><AdminCatalogField label="Edit tags" wide value={adminListValue(draft.edits)} onChange={(event) => update('edits', event.target.value)} placeholder="new-arrivals, bestsellers" /></div><div className="admin-flags"><label className="admin-flag"><input type="checkbox" checked={draft.visible !== false} onChange={(event) => update('visible', event.target.checked)} /><span>Visible on storefront</span></label><label className="admin-flag"><input type="checkbox" checked={draft.isNew === true} onChange={(event) => update('isNew', event.target.checked)} /><span>New arrival</span></label><label className="admin-flag"><input type="checkbox" checked={draft.isFeatured === true} onChange={(event) => update('isFeatured', event.target.checked)} /><span>Featured product</span></label><label className="admin-flag"><input type="checkbox" checked={draft.isSoldOut === true} onChange={(event) => update('isSoldOut', event.target.checked)} /><span>Mark sold out</span></label></div></section>
+      <section className="admin-editor-section"><div className="admin-editor-section__title"><span>05</span><div><h3>Variants & merchandising</h3><p>Comma-separate sizes and edit tags.</p></div></div><div className="admin-catalog-form-grid"><AdminCatalogField label="Sizes" value={adminListValue(draft.sizes)} onChange={(event) => update('sizes', event.target.value)} placeholder="S, M, L, XL" required /><AdminCatalogField label="Edit tags" wide value={adminListValue(draft.edits)} onChange={(event) => update('edits', event.target.value)} placeholder="new-arrivals, bestsellers" /></div><div className="admin-flags"><label className="admin-flag"><input type="checkbox" checked={draft.visible !== false} onChange={(event) => update('visible', event.target.checked)} /><span>Visible on storefront</span></label><label className="admin-flag"><input type="checkbox" checked={draft.isNew === true} onChange={(event) => update('isNew', event.target.checked)} /><span>New arrival</span></label><label className="admin-flag"><input type="checkbox" checked={draft.isFeatured === true} onChange={(event) => update('isFeatured', event.target.checked)} /><span>Featured product</span></label><label className="admin-flag"><input type="checkbox" checked={draft.isSoldOut === true} onChange={(event) => update('isSoldOut', event.target.checked)} /><span>Mark sold out</span></label></div></section>
 
       <div className="admin-catalog-actions"><button className="button button-dark" type="submit" disabled={state === 'saving' || state === 'uploading'}>{state === 'saving' ? 'Saving product…' : 'Save product'} <Icon name="arrow" size={15} /></button>{selectedId !== 'new' && <button className="button button-ghost" type="button" onClick={archive} disabled={state === 'saving'}>Archive product</button>}<span>Changes appear on the storefront after saving.</span></div>
     </form>
@@ -1639,9 +1638,10 @@ function AdminPage({ account, authReady, onAuthenticate, onLogout, onCatalogChan
 
   const uploadProductImage = async (file) => (await uploadAdminProductImage(file)).image
 
-  if (!authReady || status === 'loading') return <main className="admin-page"><div className="page-shell"><div className="admin-state"><span className="eyebrow">Scudo / Store admin</span><h1>Verifying access…</h1><p>Checking your Firebase session and admin permissions.</p></div></div></main>
+  if (!authReady) return <main className="admin-page"><div className="page-shell"><div className="admin-state"><span className="eyebrow">Scudo / Store admin</span><h1>Verifying access…</h1><p>Checking your Firebase session and admin permissions.</p></div></div></main>
   if (!account) return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">Authorized team only</span><h1>Store administration.</h1><p>Sign in with a verified email listed in the secure admin configuration.</p><AuthForm onSuccess={onAuthenticate} /></div></main>
   if (status === 'error') return <main className="admin-page"><div className="page-shell"><div className="admin-state admin-state--error"><span className="eyebrow">Access unavailable</span><h1>Admin access was not granted.</h1><p>{error}</p><div><button className="button button-dark" type="button" onClick={() => setReloadKey((value) => value + 1)}>Retry access</button><button className="button button-ghost" type="button" onClick={onLogout}>Use another account</button></div></div></div></main>
+  if (status !== 'ready' || !dashboard) return <main className="admin-page"><div className="page-shell"><div className="admin-state"><span className="eyebrow">Scudo / Store admin</span><h1>Verifying access…</h1><p>Checking your Firebase session and admin permissions.</p></div></div></main>
 
   const stats = [
     ['Total orders', dashboard.stats.totalOrders, 'all recorded orders'],

@@ -1,11 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Bree+Serif&family=DM+Sans:wght@400;500;600;700&display=swap');
-
 @font-face {
   font-family: 'Scudo Recoleta';
   src: url('/fonts/recoleta-black.woff2') format('woff2');
   font-style: normal;
   font-weight: 900;
-  font-display: swap;
+  font-display: block;
 }
 
 @font-face {
@@ -13,15 +11,7 @@
   src: url('/fonts/typogama-ahsing.otf') format('opentype');
   font-style: normal;
   font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Scudo Wordmark';
-  src: url('/fonts/caprasimo-regular.ttf') format('truetype');
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
+  font-display: block;
 }
 
 :root {
@@ -33,9 +23,9 @@
   --green: #215c3d;
   --line: rgba(17, 17, 17, .16);
   --muted: #77736c;
-  --display: 'Bree Serif', 'Cooper Black', Fraunces, Georgia, serif;
-  --body: 'DM Sans', Inter, Manrope, Arial, sans-serif;
-  --price-font: 'DM Sans', Inter, 'Helvetica Neue', Arial, sans-serif;
+  --display: 'Scudo Recoleta';
+  --body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --price-font: var(--body);
   --motion-instant: 100ms;
   --motion-fast: 180ms;
   --motion-ui: 260ms;
@@ -117,9 +107,10 @@ h1, h2, h3 { font-weight: 400; }
 .account-popover > a:hover svg { transform: translateX(4px); }
 
 .scudo-logo { position: relative; width: 360px; height: 271px; display: block; flex: 0 0 auto; overflow: visible; background: var(--logo-field, transparent); color: var(--logo-primary); isolation: isolate; }
-.scudo-logo--reference { --shirt-final-rotation: 0deg; overflow: hidden; }
+.scudo-logo--reference { --shirt-final-rotation: 0deg; overflow: hidden; border-radius: clamp(12px, 5%, 20px); }
 .scudo-logo__shirt { position: absolute; z-index: 0; top: 1px; left: 69%; width: 155px; height: 137px; overflow: visible; opacity: 1; pointer-events: none; transform: translateX(-50%) rotate(var(--shirt-final-rotation, 0deg)); transform-origin: 56% 18%; }
-.scudo-logo__word { position: absolute; z-index: 2; top: 55%; left: 50%; color: var(--logo-primary); font-family: 'Scudo Ahsing', 'Scudo Wordmark', 'Scudo Recoleta', 'Cooper Black', 'Cooper Std Black', Georgia, serif; font-size: 126px; font-weight: 400; font-kerning: normal; font-synthesis: none; font-feature-settings: 'kern' 1, 'liga' 1; letter-spacing: -.075em; line-height: .78; white-space: nowrap; transform: translate(-50%, -50%) scaleX(1.02); transform-origin: center; text-shadow: 2px 4px 3px rgba(17, 19, 20, .24); }
+.scudo-logo__word { position: absolute; z-index: 2; top: 55%; left: 50%; visibility: hidden; color: var(--logo-primary); font-family: 'Scudo Ahsing'; font-size: 126px; font-style: normal; font-weight: 400; font-kerning: normal; font-synthesis: none; font-feature-settings: 'kern' 1, 'liga' 1; letter-spacing: -.075em; line-height: .78; white-space: nowrap; transform: translate(-50%, -50%) scaleX(1.02); transform-origin: center; text-shadow: 2px 4px 3px rgba(17, 19, 20, .24); }
+.scudo-ahsing-ready .scudo-logo__word { visibility: visible; }
 .scudo-logo__letter { display: inline-block; transform-origin: 50% 88%; will-change: transform, opacity, filter; }
 .scudo-logo__letter--s { margin-right: -.005em; }
 .scudo-logo__letter--c { margin-right: -.012em; }
@@ -142,7 +133,8 @@ h1, h2, h3 { font-weight: 400; }
 .scudo-logo--mark-only { width: 96px; height: 96px; }
 .scudo-logo--mark-only .scudo-logo__shirt { width: 96px; height: 87px; top: 4px; left: 50%; }
 .scudo-logo--s-only { width: 52px; height: 52px; display: grid; place-items: center; }
-.scudo-logo__s { color: var(--logo-primary); font-family: 'Scudo Ahsing', 'Scudo Wordmark', 'Scudo Recoleta', 'Cooper Black', 'Cooper Std Black', Georgia, serif; font-size: 45px; font-weight: 400; font-synthesis: none; line-height: 1; }
+.scudo-logo__s { visibility: hidden; color: var(--logo-primary); font-family: 'Scudo Ahsing'; font-size: 45px; font-style: normal; font-weight: 400; font-synthesis: none; line-height: 1; }
+.scudo-ahsing-ready .scudo-logo__s { visibility: visible; }
 .scudo-logo--horizontal { width: 292px; height: 76px; }
 .scudo-logo--horizontal .scudo-logo__shirt { left: 17%; top: 2px; width: 74px; height: 67px; }
 .scudo-logo--horizontal .scudo-logo__word { top: 47%; left: 58%; font-size: 58px; }
@@ -215,7 +207,7 @@ h1, h2, h3 { font-weight: 400; }
 .hero-kicker { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
 .hero-kicker i { width: clamp(40px, 5vw, 84px); height: 1px; display: block; background: var(--line); }
 .hero-copy h1 { max-width: 650px; margin: 26px 0 24px; font-family: var(--display); font-size: clamp(54px, 5.5vw, 88px); letter-spacing: -.062em; line-height: .9; }
-.hero--campaign .hero-copy h1.hero-armour-title { max-width: 470px; margin: 0 0 34px; font-family: "Bodoni MT", Didot, "Times New Roman", serif; font-size: clamp(72px, 7vw, 108px); font-weight: 400; letter-spacing: -.075em; line-height: .78; text-transform: uppercase; }
+.hero--campaign .hero-copy h1.hero-armour-title { max-width: 470px; margin: 0 0 34px; font-family: var(--display); font-size: clamp(72px, 7vw, 108px); font-weight: 900; letter-spacing: -.075em; line-height: .78; text-transform: uppercase; }
 .hero-armour-title .hero-line > span { width: 128%; display: block; transform: scaleX(.78); transform-origin: left center; }
 .hero-line { display: block; transform-origin: left center; animation: hero-line-in .85s cubic-bezier(.2,.8,.2,1) both; }
 .hero-line:nth-child(2) { animation-delay: .08s; }
@@ -238,7 +230,7 @@ h1, h2, h3 { font-weight: 400; }
 .hero-visual::before { position: absolute; z-index: 2; inset: 0; background-image: linear-gradient(rgba(247,244,238,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(247,244,238,.1) 1px, transparent 1px); background-size: 25% 25%; content: ''; opacity: .28; pointer-events: none; }
 .hero-visual::after { position: absolute; z-index: 2; inset: 0; background: linear-gradient(90deg, rgba(17,17,17,.2), transparent 28%, rgba(17,17,17,.13)), linear-gradient(0deg, rgba(17,17,17,.32), transparent 42%); content: ''; pointer-events: none; }
 .hero-visual > img { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 20%; mix-blend-mode: multiply; filter: saturate(.8) contrast(1.035); animation: hero-image-in .9s cubic-bezier(.2,.8,.2,1) backwards; }
-.hero-ghost-word { position: absolute; z-index: 2; top: 47%; left: 50%; color: rgba(247,244,238,.16); font-family: 'Scudo Recoleta', var(--display); font-size: clamp(100px, 15vw, 250px); letter-spacing: -.09em; line-height: .7; white-space: nowrap; transform: translate(-50%, -50%) rotate(-4deg); mix-blend-mode: overlay; pointer-events: none; }
+.hero-ghost-word { position: absolute; z-index: 2; top: 47%; left: 50%; color: rgba(247,244,238,.16); font-family: var(--display); font-size: clamp(100px, 15vw, 250px); letter-spacing: -.09em; line-height: .7; white-space: nowrap; transform: translate(-50%, -50%) rotate(-4deg); mix-blend-mode: overlay; pointer-events: none; }
 .hero-stamp { position: absolute; z-index: 4; top: 30px; right: 34px; display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--paper); font-size: 9px; font-weight: 700; letter-spacing: .12em; }
 .hero-stamp span:first-child { width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid rgba(247,244,238,.75); border-radius: 50%; font-family: var(--display); font-size: 16px; letter-spacing: -.08em; }
 .hero-product-card { position: absolute; z-index: 4; bottom: 75px; left: 34px; width: min(300px, calc(100% - 130px)); border: 1px solid rgba(17,17,17,.12); background: rgba(247,244,238,.9); color: var(--ink); padding: 18px; backdrop-filter: blur(14px); animation: hero-card-in .65s cubic-bezier(.2,.8,.2,1) .28s both; }
@@ -1358,7 +1350,7 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
 .home-page .hero--campaign { min-height: clamp(600px, calc(100svh - 78px), 720px); grid-template-columns: minmax(410px, .84fr) minmax(0, 1.16fr); gap: clamp(14px, 1.4vw, 24px); background: var(--paper); padding: clamp(14px, 1.4vw, 24px) clamp(14px, 2vw, 32px) 0; }
 .home-page .hero--campaign .hero-copy { overflow: visible; justify-content: center; padding: clamp(52px, 6vw, 94px) clamp(34px, 5.5vw, 92px); }
 .home-page .hero-kicker { margin-bottom: 27px; color: var(--muted); }
-.home-page .hero--campaign .hero-copy h1.hero-armour-title { max-width: 590px; margin: 0 0 26px; font-family: 'Scudo Recoleta', 'Cooper Black', Georgia, serif; font-size: clamp(64px, 5.6vw, 96px); font-weight: 900; letter-spacing: -.065em; line-height: .84; text-transform: none; }
+.home-page .hero--campaign .hero-copy h1.hero-armour-title { max-width: 590px; margin: 0 0 26px; font-family: var(--display); font-size: clamp(64px, 5.6vw, 96px); font-weight: 900; letter-spacing: -.065em; line-height: .84; text-transform: none; }
 .home-page .hero-armour-title .hero-line > span { width: auto; transform: none; }
 .home-page .hero-armour-title em { color: var(--green); font-style: normal; }
 .home-page .hero-deck { max-width: 370px; margin: 0 0 30px; color: #68635c; font-size: 13px; line-height: 1.65; }
@@ -1466,13 +1458,15 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
 .home-page .hero--campaign .hero-copy h1.hero-armour-title {
   max-width: 620px;
   margin: 0 0 clamp(24px, 3.2vh, 34px);
-  font-family: 'Scudo Recoleta', 'Cooper Black', Georgia, serif;
+  visibility: hidden;
+  font-family: var(--display);
   font-size: clamp(70px, 6.25vw, 104px);
   font-weight: 900;
   letter-spacing: -.072em;
   line-height: .76;
   text-transform: none;
 }
+.scudo-display-ready .home-page .hero--campaign .hero-copy h1.hero-armour-title { visibility: visible; }
 .home-page .hero-armour-title .hero-line > span { width: auto; transform: none; }
 .home-page .hero-armour-title .hero-line--primary { position: relative; z-index: 1; }
 .home-page .hero-armour-title .hero-line--accent > span {
@@ -1561,7 +1555,7 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
 .hero-meta strong {
   display: block;
   color: var(--ink);
-  font-family: 'Scudo Recoleta', var(--display);
+  font-family: var(--display);
   font-size: clamp(15px, 1.35vw, 20px);
   font-weight: 900;
   letter-spacing: -.035em;
@@ -1667,7 +1661,7 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
 .shop-all-grid .product-image-link img { transform: scale(.985); }
 .shop-all-grid .product-card:hover .product-image-link .product-image-main { transform: scale(1.025); }
 .shop-all-grid .product-meta { gap: 9px 14px; border-bottom: 1px solid rgba(17,17,17,.13); padding: 16px 4px 18px; }
-.shop-all-grid .product-name { font-family: 'Scudo Recoleta', var(--display); font-size: clamp(16px, 1.45vw, 21px); font-weight: 900; letter-spacing: -.045em; }
+.shop-all-grid .product-name { font-family: var(--display); font-size: clamp(16px, 1.45vw, 21px); font-weight: 900; letter-spacing: -.045em; }
 .shop-all-grid .product-price { padding-top: 2px; font-size: 11px; }
 .shop-all-grid .product-detail-line { color: #7a756d; font-size: 9px; letter-spacing: .01em; }
 .shop-all-grid .wishlist-button { top: 13px; right: 13px; width: 38px; height: 38px; border-color: rgba(17,17,17,.16); background: rgba(250,248,243,.9); backdrop-filter: blur(8px); }
@@ -1704,7 +1698,7 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
 .collection-card img { min-height: 520px; opacity: .86; filter: saturate(.84) contrast(1.02); }
 .collection-card:hover img { opacity: .72; transform: scale(1.035); }
 .collection-overlay { padding: 31px; }
-.collection-overlay h3 { margin-top: 12px; font-family: 'Scudo Recoleta', var(--display); font-size: clamp(30px, 3vw, 43px); font-weight: 900; }
+.collection-overlay h3 { margin-top: 12px; font-family: var(--display); font-size: clamp(30px, 3vw, 43px); font-weight: 900; }
 .collection-copy { max-width: 240px; font-size: 11px; line-height: 1.55; }
 .collection-card .circle-link--small { width: 46px; height: 46px; margin-top: 25px; background: rgba(17,17,17,.16); backdrop-filter: blur(10px); }
 
@@ -1720,7 +1714,7 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
 .story-section:hover .story-image img { transform: scale(1.025); }
 .story-copy { background: var(--green); color: var(--paper); }
 .story-copy .eyebrow { color: var(--sand); }
-.story-copy h2 { font-family: 'Scudo Recoleta', var(--display); }
+.story-copy h2 { font-family: var(--display); }
 .story-copy h2 em { color: var(--sand); }
 .story-copy p { color: rgba(247,244,238,.72); }
 .story-copy .text-link { border-color: rgba(247,244,238,.45); color: var(--paper); }
@@ -1729,7 +1723,7 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
 
 .benefits-section { max-width: 1520px; gap: clamp(50px, 7vw, 100px); padding-top: clamp(100px, 9vw, 140px); padding-bottom: clamp(105px, 10vw, 150px); }
 .benefit-intro { position: sticky; top: 122px; align-self: start; }
-.benefits-section h2 { font-family: 'Scudo Recoleta', var(--display); font-size: clamp(43px, 4.5vw, 66px); }
+.benefits-section h2 { font-family: var(--display); font-size: clamp(43px, 4.5vw, 66px); }
 .benefit-grid { gap: 10px; border: 0; }
 .benefit {
   min-height: 205px;
@@ -1741,21 +1735,10 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
 .benefit:nth-child(even) { border-left: 1px solid rgba(17,17,17,.12); padding-left: 24px; }
 .benefit:hover { border-color: rgba(33,92,61,.45); background: var(--cream); transform: translateY(-4px); }
 .benefit > span { color: var(--green); font-size: 9px; font-weight: 800; letter-spacing: .16em; }
-.benefit h3 { margin-top: 30px; font-family: 'Scudo Recoleta', var(--display); font-size: clamp(20px, 2vw, 27px); font-weight: 900; }
+.benefit h3 { margin-top: 30px; font-family: var(--display); font-size: clamp(20px, 2vw, 27px); font-weight: 900; }
 .benefit p { max-width: 270px; color: #716c64; line-height: 1.65; }
 
 .site-footer { position: relative; overflow: hidden; border-top: 4px solid var(--sand); padding-top: 46px; }
-.footer-wordmark {
-  max-width: 1344px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin: 0 auto 65px;
-  border-bottom: 1px solid rgba(247,244,238,.2);
-  padding-bottom: 24px;
-}
-.footer-wordmark span { color: var(--paper); font-family: 'Scudo Recoleta', var(--display); font-size: clamp(78px, 12vw, 170px); font-weight: 900; letter-spacing: -.085em; line-height: .62; }
-.footer-wordmark small { margin-bottom: 4px; color: var(--sand); font-size: 8px; font-weight: 800; letter-spacing: .19em; text-transform: uppercase; }
 .footer-top { grid-template-columns: 1fr 1fr; gap: clamp(60px, 10vw, 150px); }
 .footer-brand p { max-width: 270px; color: #aaa59d; line-height: 1.75; }
 .footer-links { gap: 70px; }
@@ -1773,7 +1756,6 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
   .collection-card img { min-height: 470px; }
   .story-section { grid-template-columns: 1fr 1fr; }
   .benefit-intro { position: static; }
-  .footer-wordmark { margin-right: 28px; margin-left: 28px; }
 }
 
 @media (max-width: 740px) {
@@ -1806,9 +1788,6 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
   .benefit h3 { margin-top: 23px; font-size: 18px; }
   .benefit p { font-size: 11px; }
   .site-footer { padding-top: 38px; }
-  .footer-wordmark { align-items: flex-start; flex-direction: column; gap: 18px; margin: 0 21px 50px; padding-bottom: 20px; }
-  .footer-wordmark span { font-size: clamp(72px, 25vw, 100px); }
-  .footer-wordmark small { margin-bottom: 0; }
   .footer-top { display: block; }
 }
 
