@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { products } from './productCatalog.js'
+import { products, replaceCatalogProducts } from './productCatalog.js'
+import { loadStoreCatalog } from './catalogApi.js'
 import { payWithRazorpay } from './razorpay.js'
 import {
   authenticateWithEmail,
@@ -12,7 +13,14 @@ import {
   updateFirebaseProfile,
   watchFirebaseAuth
 } from './firebaseAuth.js'
-import { loadAdminDashboard, updateAdminOrder } from './adminApi.js'
+import {
+  archiveAdminProduct,
+  loadAdminCatalog,
+  loadAdminDashboard,
+  saveAdminProduct,
+  updateAdminOrder,
+  uploadAdminProductImage
+} from './adminApi.js'
 import {
   isCustomerProfileComplete,
   loadCustomerProfile,
@@ -75,6 +83,7 @@ const catalogEditLabels = {
 
 const formatMoney = (amount) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)
 const SHIPPING_CHARGE = 50
+const categorySlug = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
 
 const socialLinks = [
   { name: 'WhatsApp', handle: '+91 87674 16351', href: 'https://wa.me/918767416351', icon: 'whatsapp' },
@@ -430,7 +439,7 @@ function HomePage({ wishlist, onToggleWishlist, onQuickAdd }) {
   const campaignProducts = ['portugal-black-special', 'real-madrid-home'].map((id) => products.find((product) => product.id === id)).filter(Boolean)
   const [heroIndex, setHeroIndex] = useState(0)
   useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
+    if (campaignProducts.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined
     const interval = window.setInterval(() => { if (!document.hidden) setHeroIndex((index) => (index + 1) % campaignProducts.length) }, 3000)
     return () => window.clearInterval(interval)
   }, [campaignProducts.length])
@@ -480,15 +489,18 @@ function ShopPage({ wishlist, onToggleWishlist, onQuickAdd, initialCategory }) {
     const timer = window.setTimeout(() => searchRef.current?.focus(), 280)
     return () => window.clearTimeout(timer)
   }, [queryString])
+  const catalogKey = products.map((product) => `${product.id}:${product.updatedAt || ''}`).join('|')
+  const catalogCategories = [...new Set(products.map((product) => product.category).filter(Boolean))].sort()
   const visibleProducts = useMemo(() => products.filter((product) => {
     const matchesEdit = !edit || product.edits?.includes(edit)
     const matchesCategory = !initialCategory || product.category === initialCategory
     const term = search.trim().toLowerCase()
     const matchesSearch = !term || [product.name, product.category, product.collection, product.shortDescription].filter(Boolean).join(' ').toLowerCase().includes(term)
     return matchesEdit && matchesCategory && matchesSearch
-  }).sort((a, b) => sort === 'newest' ? Number(b.isNew) - Number(a.isNew) : sort === 'price-low' ? (a.salePrice || a.price) - (b.salePrice || b.price) : sort === 'price-high' ? (b.salePrice || b.price) - (a.salePrice || a.price) : Number(b.isFeatured) - Number(a.isFeatured)), [initialCategory, sort, edit, search])
+  }).sort((a, b) => sort === 'newest' ? Number(b.isNew) - Number(a.isNew) : sort === 'price-low' ? (a.salePrice || a.price) - (b.salePrice || b.price) : sort === 'price-high' ? (b.salePrice || b.price) - (a.salePrice || a.price) : Number(b.isFeatured) - Number(a.isFeatured)), [catalogKey, initialCategory, sort, edit, search])
   return <main className="shop-page"><div className="page-shell"><Breadcrumbs items={[{ label: pageTitle }]} />
     <div className="shop-heading"><div><span className="eyebrow">{edit ? 'Curated team sheet' : initialCategory ? `${initialCategory} rotation` : 'The full rotation'}</span><h1>{pageTitle}</h1></div><p>Official Scudo product photography, organised for quick discovery.</p></div>
+    <nav className="catalog-category-tabs" aria-label="Shop by clothing category"><Link to="/shop" className={!initialCategory ? 'is-active' : ''}>All</Link>{catalogCategories.map((category) => <Link key={category} to={`/shop/${categorySlug(category)}`} className={initialCategory === category ? 'is-active' : ''}>{category}</Link>)}</nav>
     <div className="shop-toolbar shop-toolbar--search"><label className="catalog-search"><Icon name="search" size={16} /><span className="sr-only">Search products</span><input ref={searchRef} type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search shirts, teams, collections" autoComplete="off" />{search && <button type="button" onClick={() => { setSearch(''); searchRef.current?.focus() }} aria-label="Clear product search"><Icon name="close" size={14} /></button>}</label><span className="product-count" aria-live="polite">{visibleProducts.length} pieces</span><div className="sort-select"><label htmlFor="sort">Sort by</label><select id="sort" value={sort} onChange={(e) => setSort(e.target.value)}><option value="featured">Featured</option><option value="newest">Newest</option><option value="price-low">Price low to high</option><option value="price-high">Price high to low</option></select><Icon name="chevron" size={14} /></div></div><div className="shop-results shop-results--full">{visibleProducts.length ? <div className="product-grid product-grid--three">{visibleProducts.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="No pieces match" copy={`No products match “${search}”. Try a team, category, or collection name.`} action={<button type="button" className="button button-dark" onClick={() => setSearch('')}>Clear search</button>} />}</div></div></main>
 }
 
@@ -1445,8 +1457,134 @@ function AdminOrderEditor({ order, onSave }) {
   return <article className="admin-order-card"><div className="admin-order-card__head"><div><span className="eyebrow">{order.receipt || order.orderId}</span><h3>{order.customer.name || 'Customer'}</h3></div><span className={`status-pill status-pill--${order.paymentStatus}`}>{order.paymentStatus}</span></div><div className="admin-order-card__meta"><span>{new Date(order.createdAt || Date.now()).toLocaleDateString('en-IN')}</span><span>{order.customer.email}</span><strong>{formatMoney((order.amount || 0) / 100)}</strong></div><div className="admin-order-card__items">{order.lineItems.map((item) => <span key={`${order.orderId}-${item.productId}-${item.size}`}>{item.quantity} × {item.name} / {item.size}</span>)}</div><p>{[order.customer.address, order.customer.address2, order.customer.landmark && `Landmark: ${order.customer.landmark}`, order.customer.city, order.customer.state, order.customer.postal].filter(Boolean).join(', ')}</p><form className="admin-order-card__form" onSubmit={submit}><label><span>Fulfilment</span><select value={fulfilmentStatus} onChange={(event) => setFulfilmentStatus(event.target.value)}><option value="unfulfilled">Unfulfilled</option><option value="packing">Packing</option><option value="shipped">Shipped</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></label><label><span>Tracking reference</span><input value={trackingNumber} onChange={(event) => setTrackingNumber(event.target.value)} maxLength="100" placeholder="Optional" /></label><button className="button button-dark" type="submit" disabled={state === 'saving'}>{state === 'saving' ? 'Saving…' : state === 'saved' ? 'Saved' : 'Save'} <Icon name={state === 'saved' ? 'check' : 'arrow'} size={14} /></button></form>{state === 'error' && <span className="form-error">This update could not be saved. Refresh and try again.</span>}</article>
 }
 
-function AdminPage({ account, authReady, onAuthenticate, onLogout }) {
+const blankAdminProduct = () => ({
+  id: '', slug: '', name: '', sku: '', category: 'Shirts', collection: 'Everyday', description: '', shortDescription: '',
+  price: '', salePrice: '', inventory: 1, sizes: ['S', 'M', 'L', 'XL'], colors: ['Black'], images: [], material: '',
+  careInstructions: 'Cold wash inside out. Air dry in shade.', edits: [], isNew: true, isFeatured: false, isSoldOut: false,
+  visible: true, status: 'active', source: 'custom'
+})
+
+const adminListValue = (value) => Array.isArray(value) ? value.join(', ') : value || ''
+
+function AdminCatalogField({ label, wide = false, as = 'input', children, ...props }) {
+  return <label className={`admin-catalog-field ${wide ? 'admin-catalog-field--wide' : ''}`}><span>{label}</span>{as === 'textarea' ? <textarea {...props} /> : as === 'select' ? <select {...props}>{children}</select> : <input {...props} />}</label>
+}
+
+function AdminCatalogManager({ catalog, onSave, onArchive, onUpload }) {
+  const firstProduct = catalog.find((product) => product.status !== 'archived') || catalog[0] || blankAdminProduct()
+  const [selectedId, setSelectedId] = useState(firstProduct.id || 'new')
+  const [draft, setDraft] = useState(firstProduct)
+  const [search, setSearch] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
+  const [state, setState] = useState('idle')
+  const [message, setMessage] = useState('')
+  const [imagePath, setImagePath] = useState('')
+
+  useEffect(() => {
+    if (selectedId === 'new') return
+    const updated = catalog.find((product) => product.id === selectedId)
+    if (updated) setDraft(updated)
+  }, [catalog, selectedId])
+
+  const update = (field, value) => setDraft((current) => ({ ...current, [field]: value }))
+  const filtered = catalog.filter((product) => (showArchived || product.status !== 'archived') && [product.name, product.sku, product.category, product.collection].join(' ').toLowerCase().includes(search.trim().toLowerCase()))
+  const choose = (product) => { setSelectedId(product.id); setDraft(product); setState('idle'); setMessage(''); setImagePath('') }
+  const createProduct = () => { setSelectedId('new'); setDraft(blankAdminProduct()); setState('idle'); setMessage(''); setImagePath('') }
+
+  const submit = async (event) => {
+    event.preventDefault()
+    if (state === 'saving' || state === 'uploading') return
+    setState('saving')
+    setMessage('')
+    try {
+      const saved = await onSave(draft, selectedId === 'new')
+      setSelectedId(saved.id)
+      setDraft(saved)
+      setState('saved')
+      setMessage('Product saved and storefront catalog updated.')
+      window.setTimeout(() => setState('idle'), 1800)
+    } catch (error) {
+      setState('error')
+      setMessage(error?.message || 'This product could not be saved.')
+    }
+  }
+
+  const uploadImages = async (event) => {
+    const files = [...(event.target.files || [])].slice(0, Math.max(0, 8 - (draft.images?.length || 0)))
+    event.target.value = ''
+    if (!files.length) return
+    setState('uploading')
+    setMessage('Uploading product photos…')
+    try {
+      const uploaded = []
+      for (const file of files) uploaded.push((await onUpload(file)).url)
+      update('images', [...(draft.images || []), ...uploaded].slice(0, 8))
+      setState('idle')
+      setMessage(`${uploaded.length} photo${uploaded.length === 1 ? '' : 's'} uploaded. Save the product to publish the change.`)
+    } catch (error) {
+      setState('error')
+      setMessage(error?.message || 'The product photo could not be uploaded.')
+    }
+  }
+
+  const addImagePath = () => {
+    const value = imagePath.trim()
+    if (!value || (draft.images || []).includes(value)) return
+    update('images', [...(draft.images || []), value].slice(0, 8))
+    setImagePath('')
+  }
+
+  const archive = async () => {
+    if (selectedId === 'new' || !window.confirm(`Archive ${draft.name}? It will be removed from the storefront but kept in the admin history.`)) return
+    setState('saving')
+    setMessage('')
+    try {
+      await onArchive(selectedId)
+      setState('saved')
+      setMessage('Product archived and removed from the storefront.')
+    } catch (error) {
+      setState('error')
+      setMessage(error?.message || 'This product could not be archived.')
+    }
+  }
+
+  return <section className="admin-catalog-workspace">
+    <aside className="admin-catalog-sidebar">
+      <div className="admin-catalog-sidebar__head"><div><span className="eyebrow">Catalog / {catalog.length}</span><h2>Products</h2></div><button type="button" className="button button-dark" onClick={createProduct}><Icon name="plus" size={14} /> Add product</button></div>
+      <label className="admin-catalog-search"><Icon name="search" size={15} /><span className="sr-only">Search catalog</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search name, SKU, category" /></label>
+      <label className="admin-flag admin-flag--compact"><input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} /><span>Show archived products</span></label>
+      <div className="admin-catalog-list">{filtered.map((product) => <button type="button" key={product.id} className={selectedId === product.id ? 'is-active' : ''} onClick={() => choose(product)}><CatalogImage src={product.shopImage || product.images?.[0]} alt="" sizes="58px" /><span><strong>{product.name}</strong><small>{product.category} · {product.sku}</small><em>{product.status === 'archived' ? 'Archived' : product.isSoldOut ? 'Sold out' : `${product.inventory} in stock`}</em></span><b>{formatMoney(product.salePrice || product.price)}</b></button>)}{!filtered.length && <p className="admin-catalog-empty">No products match this search.</p>}</div>
+    </aside>
+
+    <form className="admin-catalog-editor" onSubmit={submit}>
+      <div className="admin-catalog-editor__head"><div><span className="eyebrow">{selectedId === 'new' ? 'New catalog item' : `Editing / ${draft.sku}`}</span><h2>{selectedId === 'new' ? 'Add new clothing' : draft.name}</h2><p>Add jerseys, shirts, T-shirts, jeans, trousers, jackets, or any future Scudo category.</p></div><span className={`status-pill ${draft.status === 'archived' ? 'status-pill--cancelled' : ''}`}>{draft.status === 'archived' ? 'Archived' : draft.visible === false ? 'Hidden' : 'Published'}</span></div>
+      {message && <p className={`admin-catalog-message ${state === 'error' ? 'is-error' : ''}`} role="status">{message}</p>}
+      <section className="admin-editor-section"><div className="admin-editor-section__title"><span>01</span><div><h3>Product identity</h3><p>Customer-facing name, URL, category, and internal stock code.</p></div></div><div className="admin-catalog-form-grid">
+        <AdminCatalogField label="Product name" wide value={draft.name || ''} onChange={(event) => update('name', event.target.value)} maxLength="100" required />
+        <AdminCatalogField label="SKU" value={draft.sku || ''} onChange={(event) => update('sku', event.target.value)} maxLength="40" placeholder="SC-SHIRT-001" />
+        <AdminCatalogField label="URL slug" value={draft.slug || ''} onChange={(event) => update('slug', event.target.value)} maxLength="100" placeholder="black-oversized-shirt" />
+        <AdminCatalogField label="Category" value={draft.category || ''} onChange={(event) => update('category', event.target.value)} list="admin-category-suggestions" required />
+        <datalist id="admin-category-suggestions"><option value="Jerseys" /><option value="Shirts" /><option value="T-Shirts" /><option value="Jeans" /><option value="Trousers" /><option value="Jackets" /><option value="Hoodies" /><option value="Accessories" /></datalist>
+        <AdminCatalogField label="Collection" value={draft.collection || ''} onChange={(event) => update('collection', event.target.value)} maxLength="80" />
+      </div></section>
+
+      <section className="admin-editor-section"><div className="admin-editor-section__title"><span>02</span><div><h3>Photos</h3><p>Upload up to eight JPG, PNG, WebP, or AVIF images. The first image is the storefront cover.</p></div></div><div className="admin-image-uploader"><label className="admin-upload-button"><input type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple onChange={uploadImages} disabled={state === 'uploading'} /><Icon name="plus" size={17} /><span>{state === 'uploading' ? 'Uploading…' : 'Upload product photos'}<small>Maximum 4 MB per image</small></span></label><div className="admin-image-path"><input value={imagePath} onChange={(event) => setImagePath(event.target.value)} placeholder="Or paste an existing /image-path.webp" /><button type="button" onClick={addImagePath}>Add path</button></div></div><div className="admin-image-grid">{(draft.images || []).map((src, index) => <div key={`${src}-${index}`}><CatalogImage src={src} alt={`Product preview ${index + 1}`} sizes="140px" /><span>{index === 0 ? 'Cover' : String(index + 1).padStart(2, '0')}</span><div>{index > 0 && <button type="button" onClick={() => update('images', [src, ...draft.images.filter((_, itemIndex) => itemIndex !== index)])}>Make cover</button>}<button type="button" onClick={() => update('images', draft.images.filter((_, itemIndex) => itemIndex !== index))}>Remove</button></div></div>)}{!(draft.images || []).length && <div className="admin-image-placeholder"><Icon name="plus" size={22} /><span>No product photos yet</span></div>}</div></section>
+
+      <section className="admin-editor-section"><div className="admin-editor-section__title"><span>03</span><div><h3>Story & details</h3><p>Describe the product clearly for shoppers and search.</p></div></div><div className="admin-catalog-form-grid"><AdminCatalogField as="textarea" label="Full description" wide value={draft.description || ''} onChange={(event) => update('description', event.target.value)} maxLength="2000" rows="5" required /><AdminCatalogField as="textarea" label="Short description" wide value={draft.shortDescription || ''} onChange={(event) => update('shortDescription', event.target.value)} maxLength="240" rows="2" /><AdminCatalogField label="Material" value={draft.material || ''} onChange={(event) => update('material', event.target.value)} maxLength="180" /><AdminCatalogField label="Care instructions" value={draft.careInstructions || ''} onChange={(event) => update('careInstructions', event.target.value)} maxLength="240" /></div></section>
+
+      <section className="admin-editor-section"><div className="admin-editor-section__title"><span>04</span><div><h3>Pricing & inventory</h3><p>Prices are in Indian rupees and are revalidated by the payment server.</p></div></div><div className="admin-catalog-form-grid"><AdminCatalogField label="Regular price (₹)" type="number" min="1" step="1" value={draft.price ?? ''} onChange={(event) => update('price', event.target.value)} required /><AdminCatalogField label="Discounted price (₹)" type="number" min="1" step="1" value={draft.salePrice ?? ''} onChange={(event) => update('salePrice', event.target.value)} placeholder="Optional" /><AdminCatalogField label="Inventory" type="number" min="0" max="100000" step="1" value={draft.inventory ?? 0} onChange={(event) => update('inventory', event.target.value)} required /><AdminCatalogField label="Status" as="select" value={draft.status || 'active'} onChange={(event) => update('status', event.target.value)}><option value="active">Active</option><option value="archived">Archived</option></AdminCatalogField></div></section>
+
+      <section className="admin-editor-section"><div className="admin-editor-section__title"><span>05</span><div><h3>Variants & merchandising</h3><p>Comma-separate sizes, colours, and edit tags.</p></div></div><div className="admin-catalog-form-grid"><AdminCatalogField label="Sizes" value={adminListValue(draft.sizes)} onChange={(event) => update('sizes', event.target.value)} placeholder="S, M, L, XL" required /><AdminCatalogField label="Colours" value={adminListValue(draft.colors)} onChange={(event) => update('colors', event.target.value)} placeholder="Black, Stone" required /><AdminCatalogField label="Edit tags" wide value={adminListValue(draft.edits)} onChange={(event) => update('edits', event.target.value)} placeholder="new-arrivals, bestsellers" /></div><div className="admin-flags"><label className="admin-flag"><input type="checkbox" checked={draft.visible !== false} onChange={(event) => update('visible', event.target.checked)} /><span>Visible on storefront</span></label><label className="admin-flag"><input type="checkbox" checked={draft.isNew === true} onChange={(event) => update('isNew', event.target.checked)} /><span>New arrival</span></label><label className="admin-flag"><input type="checkbox" checked={draft.isFeatured === true} onChange={(event) => update('isFeatured', event.target.checked)} /><span>Featured product</span></label><label className="admin-flag"><input type="checkbox" checked={draft.isSoldOut === true} onChange={(event) => update('isSoldOut', event.target.checked)} /><span>Mark sold out</span></label></div></section>
+
+      <div className="admin-catalog-actions"><button className="button button-dark" type="submit" disabled={state === 'saving' || state === 'uploading'}>{state === 'saving' ? 'Saving product…' : 'Save product'} <Icon name="arrow" size={15} /></button>{selectedId !== 'new' && <button className="button button-ghost" type="button" onClick={archive} disabled={state === 'saving'}>Archive product</button>}<span>Changes appear on the storefront after saving.</span></div>
+    </form>
+  </section>
+}
+
+function AdminPage({ account, authReady, onAuthenticate, onLogout, onCatalogChanged }) {
   const [dashboard, setDashboard] = useState(null)
+  const [catalog, setCatalog] = useState([])
+  const [view, setView] = useState('catalog')
   const [status, setStatus] = useState(authReady && !account ? 'idle' : 'loading')
   const [error, setError] = useState('')
   const [reloadKey, setReloadKey] = useState(0)
@@ -1467,9 +1605,10 @@ function AdminPage({ account, authReady, onAuthenticate, onLogout }) {
     let cancelled = false
     setStatus('loading')
     setError('')
-    loadAdminDashboard(true).then((payload) => {
+    Promise.all([loadAdminDashboard(true), loadAdminCatalog(true)]).then(([payload, catalogPayload]) => {
       if (cancelled) return
       setDashboard(payload)
+      setCatalog(catalogPayload.products || [])
       setStatus('ready')
     }).catch((adminError) => {
       if (cancelled) return
@@ -1484,6 +1623,22 @@ function AdminPage({ account, authReady, onAuthenticate, onLogout }) {
     setDashboard((current) => current ? { ...current, orders: current.orders.map((item) => item.orderId === payload.order.orderId ? payload.order : item) } : current)
   }
 
+  const saveProduct = async (product, isNew) => {
+    const payload = await saveAdminProduct(product, isNew)
+    setCatalog(payload.products || [])
+    onCatalogChanged(payload.products || [])
+    return payload.product
+  }
+
+  const archiveProduct = async (id) => {
+    const payload = await archiveAdminProduct(id)
+    setCatalog(payload.products || [])
+    onCatalogChanged(payload.products || [])
+    return payload.product
+  }
+
+  const uploadProductImage = async (file) => (await uploadAdminProductImage(file)).image
+
   if (!authReady || status === 'loading') return <main className="admin-page"><div className="page-shell"><div className="admin-state"><span className="eyebrow">Scudo / Store admin</span><h1>Verifying access…</h1><p>Checking your Firebase session and admin permissions.</p></div></div></main>
   if (!account) return <main className="account-page"><div className="account-card"><ScudoLogo size="sm" /><span className="eyebrow">Authorized team only</span><h1>Store administration.</h1><p>Sign in with a verified email listed in the secure admin configuration.</p><AuthForm onSuccess={onAuthenticate} /></div></main>
   if (status === 'error') return <main className="admin-page"><div className="page-shell"><div className="admin-state admin-state--error"><span className="eyebrow">Access unavailable</span><h1>Admin access was not granted.</h1><p>{error}</p><div><button className="button button-dark" type="button" onClick={() => setReloadKey((value) => value + 1)}>Retry access</button><button className="button button-ghost" type="button" onClick={onLogout}>Use another account</button></div></div></div></main>
@@ -1495,7 +1650,22 @@ function AdminPage({ account, authReady, onAuthenticate, onLogout }) {
     ['Customers', dashboard.stats.customers, 'unique email addresses']
   ]
 
-  return <main className="admin-page"><div className="page-shell"><div className="admin-header"><div><span className="eyebrow">Scudo / Secure store admin</span><h1>Good morning, {dashboard.admin.name}.</h1><p>{dashboard.admin.email}</p></div><button className="button button-ghost" onClick={onLogout}>Log out</button></div><div className="admin-stats">{stats.map(([label, value, note]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div><div className="admin-grid"><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Catalog</span><h2>Product health</h2></div><Link to="/shop" className="text-link">View storefront <Icon name="arrow" size={14} /></Link></div><div className="admin-products">{products.map((product) => <div key={product.id}><CatalogImage src={product.shopImage || product.images[0]} sizes="45px" alt="" /><span>{product.name}<small>{product.sku}</small></span><strong className={product.inventory < 8 ? 'low-stock' : ''}>{product.isSoldOut ? 'Sold out' : `${product.inventory} in stock`}</strong></div>)}</div></section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Security</span><h2>Protected operations</h2></div><span className="status-pill">Verified</span></div><div className="admin-checklist">{['Firebase identity verified', 'Admin allow-list enforced', 'Razorpay totals verified on server', 'Payment webhook signatures verified'].map((item) => <div key={item}><span className="check is-done"><Icon name="check" size={13} /></span>{item}</div>)}</div></section><section className="admin-panel admin-orders-panel"><div className="panel-heading"><div><span className="eyebrow">Orders / {dashboard.orders.length}</span><h2>Fulfilment queue</h2></div><span className="connection-status">Updated {new Date(dashboard.generatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span></div>{dashboard.orders.length ? <div className="admin-orders">{dashboard.orders.map((order) => <AdminOrderEditor key={order.orderId} order={order} onSave={saveOrder} />)}</div> : <div className="admin-orders-empty"><span className="empty-mark">00</span><p>Orders will appear here after Razorpay creates them.</p></div>}</section></div></div></main>
+  const activeCatalog = catalog.filter((product) => product.status !== 'archived')
+  const lowStock = activeCatalog.filter((product) => product.inventory < 8 || product.isSoldOut)
+
+  return <main className="admin-page"><div className="page-shell">
+    <div className="admin-header"><div><span className="eyebrow">Scudo / Secure store admin</span><h1>Good morning, {dashboard.admin.name}.</h1><p>{dashboard.admin.email}</p></div><div className="admin-header__actions"><Link to="/shop" className="button button-ghost">View store</Link><button className="button button-ghost" onClick={onLogout}>Log out</button></div></div>
+    <nav className="admin-navigation" aria-label="Admin sections"><button type="button" className={view === 'overview' ? 'is-active' : ''} onClick={() => setView('overview')}><span>01</span>Overview</button><button type="button" className={view === 'catalog' ? 'is-active' : ''} onClick={() => setView('catalog')}><span>02</span>Products <b>{activeCatalog.length}</b></button><button type="button" className={view === 'orders' ? 'is-active' : ''} onClick={() => setView('orders')}><span>03</span>Orders <b>{dashboard.orders.length}</b></button></nav>
+
+    {view === 'overview' && <>
+      <div className="admin-stats">{stats.map(([label, value, note]) => <div key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div>
+      <div className="admin-grid"><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Catalog / {activeCatalog.length}</span><h2>Product health</h2></div><button type="button" className="text-link" onClick={() => setView('catalog')}>Manage catalog <Icon name="arrow" size={14} /></button></div><div className="admin-products">{activeCatalog.slice(0, 10).map((product) => <div key={product.id}><CatalogImage src={product.shopImage || product.images[0]} sizes="45px" alt="" /><span>{product.name}<small>{product.category} · {product.sku}</small></span><strong className={product.inventory < 8 ? 'low-stock' : ''}>{product.isSoldOut ? 'Sold out' : `${product.inventory} in stock`}</strong></div>)}</div>{lowStock.length > 0 && <p>{lowStock.length} product{lowStock.length === 1 ? '' : 's'} need stock attention.</p>}</section><section className="admin-panel"><div className="panel-heading"><div><span className="eyebrow">Security</span><h2>Protected operations</h2></div><span className="status-pill">Verified</span></div><div className="admin-checklist">{['Firebase identity verified', 'Admin allow-list enforced', 'Catalog writes protected', 'Razorpay prices validated from catalog', 'Payment webhook signatures verified'].map((item) => <div key={item}><span className="check is-done"><Icon name="check" size={13} /></span>{item}</div>)}</div></section></div>
+    </>}
+
+    {view === 'catalog' && <AdminCatalogManager catalog={catalog} onSave={saveProduct} onArchive={archiveProduct} onUpload={uploadProductImage} />}
+
+    {view === 'orders' && <section className="admin-panel admin-orders-panel admin-orders-panel--standalone"><div className="panel-heading"><div><span className="eyebrow">Orders / {dashboard.orders.length}</span><h2>Fulfilment queue</h2></div><span className="connection-status">Updated {new Date(dashboard.generatedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span></div>{dashboard.orders.length ? <div className="admin-orders">{dashboard.orders.map((order) => <AdminOrderEditor key={order.orderId} order={order} onSave={saveOrder} />)}</div> : <div className="admin-orders-empty"><span className="empty-mark">00</span><p>Orders will appear here after Razorpay creates them.</p></div>}</section>}
+  </div></main>
 }
 
 export default function App() {
@@ -1508,12 +1678,28 @@ export default function App() {
   const [wishlist, setWishlist] = usePersistedState('scudo-wishlist', [])
   const [cart, setCart] = usePersistedState('scudo-cart', [])
   const [account, setAccount] = usePersistedState('scudo-account', null)
+  const [, setCatalogRevision] = useState(0)
   const [authReady, setAuthReady] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [authPrompt, setAuthPrompt] = useState(false)
   const [profileSetupOpen, setProfileSetupOpen] = useState(false)
   const [pendingAdd, setPendingAdd] = useState(null)
   const [order, setOrder] = usePersistedState('scudo-last-order', null)
+  const applyCatalog = (catalog) => {
+    const available = catalog.filter((product) => product.status !== 'archived' && product.visible !== false)
+    if (!available.length) return
+    replaceCatalogProducts(available)
+    setCatalogRevision((value) => value + 1)
+    setCart((current) => current.flatMap((item) => {
+      const product = available.find((candidate) => candidate.id === item.product?.id)
+      return product ? [{ ...item, product }] : []
+    }))
+  }
+  useEffect(() => {
+    let active = true
+    loadStoreCatalog().then((catalog) => { if (active) applyCatalog(catalog) }).catch(() => { /* retain the bundled catalog when Functions are unavailable locally */ })
+    return () => { active = false }
+  }, [])
   useEffect(() => {
     let active = true
     const unsubscribe = watchFirebaseAuth(async (firebaseProfile) => {
@@ -1590,6 +1776,11 @@ export default function App() {
   else if (path === '/shop') content = <ShopPage wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
   else if (path === '/shop/jerseys') content = <ShopPage initialCategory="Jerseys" wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
   else if (path === '/shop/t-shirts') content = <ShopPage initialCategory="T-Shirts" wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
+  else if (path.startsWith('/shop/')) {
+    const slug = path.split('/').filter(Boolean).pop()
+    const category = products.find((product) => categorySlug(product.category) === slug)?.category || slug.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
+    content = <ShopPage initialCategory={category} wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
+  }
   else if (path.startsWith('/product/')) content = <ProductPage product={products.find((item) => item.slug === path.split('/').pop()) || products[0]} wishlist={wishlist} onToggleWishlist={toggleWishlist} onAddToCart={addToCart} />
   else if (path === '/collections') content = <CollectionsPage />
   else if (path === '/about') content = <InfoPage type="about" />
@@ -1606,7 +1797,7 @@ export default function App() {
   else if (path === '/account') content = <AccountPage account={account} order={order} onAuthenticate={authenticate} onLogout={logout} />
   else if (path === '/orders') content = <OrdersPage account={account} order={order} />
   else if (path === '/settings') content = <SettingsPage account={account} onSaveProfile={saveProfile} onSendPasswordReset={sendPasswordReset} onSendVerification={sendVerification} onLogout={logout} />
-  else if (path === '/admin') content = <AdminPage account={account} authReady={authReady} onAuthenticate={authenticate} onLogout={logout} />
+  else if (path === '/admin') content = <AdminPage account={account} authReady={authReady} onAuthenticate={authenticate} onLogout={logout} onCatalogChanged={applyCatalog} />
   else content = <InfoPage type="about" />
   return <div className={`app ${showIntro ? 'app--intro' : ''}`}><span className="scroll-progress" aria-hidden="true" /><Header cartCount={cartCount} wishlistCount={wishlist.length} account={account} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{profileSetupOpen && path !== '/admin' && account && !showIntro && <DeliveryProfileSetup account={account} onSave={completeProfileSetup} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
 }

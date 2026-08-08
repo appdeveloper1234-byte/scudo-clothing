@@ -101,3 +101,8 @@ export const products = [
     images: catalogImages('spain-home', 5), shopImage: shopMainImage('spain-home'), material: 'Lightweight performance mesh', isNew: false, isFeatured: false
   }
 ]
+
+export function replaceCatalogProducts(nextProducts) {
+  if (!Array.isArray(nextProducts) || !nextProducts.length) return
+  products.splice(0, products.length, ...nextProducts)
+}

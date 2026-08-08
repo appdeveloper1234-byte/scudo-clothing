@@ -9,16 +9,16 @@ export class AdminApiError extends Error {
   }
 }
 
-async function adminRequest(options = {}) {
+async function adminRequest(path, options = {}) {
   const token = await getFirebaseIdToken(options.forceRefresh)
-  const response = await fetch('/api/admin/dashboard', {
+  const response = await fetch(path, {
     method: options.method || 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/json',
-      ...(options.body ? { 'Content-Type': 'application/json' } : {})
+      ...(options.body && !(options.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {})
     },
-    body: options.body ? JSON.stringify(options.body) : undefined,
+    body: options.body instanceof FormData ? options.body : options.body ? JSON.stringify(options.body) : undefined,
     credentials: 'same-origin'
   })
   const contentType = response.headers.get('content-type') || ''
@@ -40,9 +40,27 @@ async function adminRequest(options = {}) {
   return payload
 }
 
-export const loadAdminDashboard = (forceRefresh = false) => adminRequest({ forceRefresh })
+export const loadAdminDashboard = (forceRefresh = false) => adminRequest('/api/admin/dashboard', { forceRefresh })
 
-export const updateAdminOrder = ({ orderId, fulfilmentStatus, trackingNumber }) => adminRequest({
+export const updateAdminOrder = ({ orderId, fulfilmentStatus, trackingNumber }) => adminRequest('/api/admin/dashboard', {
   method: 'PATCH',
   body: { orderId, fulfilmentStatus, trackingNumber }
 })
+
+export const loadAdminCatalog = (forceRefresh = false) => adminRequest('/api/admin/catalog', { forceRefresh })
+
+export const saveAdminProduct = (product, isNew = false) => adminRequest('/api/admin/catalog', {
+  method: isNew ? 'POST' : 'PATCH',
+  body: product
+})
+
+export const archiveAdminProduct = (id) => adminRequest('/api/admin/catalog', {
+  method: 'DELETE',
+  body: { id }
+})
+
+export async function uploadAdminProductImage(file) {
+  const form = new FormData()
+  form.append('image', file)
+  return adminRequest('/api/admin/catalog/image', { method: 'POST', body: form })
+}

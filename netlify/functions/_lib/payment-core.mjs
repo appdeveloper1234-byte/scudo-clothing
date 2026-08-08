@@ -9,7 +9,6 @@ export class PaymentInputError extends Error {
   }
 }
 
-const productById = new Map(products.map((product) => [product.id, product]))
 const MAX_DISTINCT_ITEMS = 20
 const MAX_QUANTITY_PER_LINE = 5
 const SHIPPING_CHARGE = 50
@@ -50,11 +49,12 @@ export function validateCustomer(input) {
   return customer
 }
 
-export function calculateOrder(inputItems) {
+export function calculateOrder(inputItems, catalogProducts = products) {
   if (!Array.isArray(inputItems) || inputItems.length === 0 || inputItems.length > MAX_DISTINCT_ITEMS) {
     throw new PaymentInputError('Your bag must contain between 1 and 20 items.')
   }
 
+  const productById = new Map(catalogProducts.map((product) => [product.id, product]))
   const consolidated = new Map()
   for (const input of inputItems) {
     if (!input || typeof input !== 'object') throw new PaymentInputError('A bag item is invalid.')
@@ -86,8 +86,8 @@ export function calculateOrder(inputItems) {
   return { lineItems, subtotal, shipping, total, amount: total * 100, currency: 'INR' }
 }
 
-export function buildTrustedOrder(payload) {
+export function buildTrustedOrder(payload, catalogProducts = products) {
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new PaymentInputError('Invalid payment request.')
   if (payload.termsAccepted !== true) throw new PaymentInputError('Accept the terms, return policy, and privacy policy to continue.')
-  return { customer: validateCustomer(payload.customer), ...calculateOrder(payload.items) }
+  return { customer: validateCustomer(payload.customer), ...calculateOrder(payload.items, catalogProducts) }
 }

@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { getStore } from '@netlify/blobs'
 import { buildTrustedOrder } from './_lib/payment-core.mjs'
+import { listCatalogProducts } from './_lib/catalog-store.mjs'
 import { assertPost, assertTrustedOrigin, handleError, json, razorpayCredentials, razorpayRequest, readJson } from './_lib/http.mjs'
 
 export default async (request) => {
@@ -8,7 +9,7 @@ export default async (request) => {
     assertPost(request)
     assertTrustedOrigin(request)
     const payload = await readJson(request)
-    const trusted = buildTrustedOrder(payload)
+    const trusted = buildTrustedOrder(payload, await listCatalogProducts())
     const receipt = `SC-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`
     const razorpayOrder = await razorpayRequest('/orders', {
       method: 'POST',
