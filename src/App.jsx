@@ -22,6 +22,7 @@ import {
   uploadAdminProductImage
 } from './adminApi.js'
 import {
+  clearCustomerProfileCache,
   isCustomerProfileComplete,
   loadCustomerProfile,
   normalizeCustomerProfile,
@@ -268,6 +269,22 @@ function useRoute() {
     return () => window.removeEventListener('popstate', onPop)
   }, [])
   return route
+}
+
+function useRequiredProfileGuard(required) {
+  useEffect(() => {
+    if (!required) return undefined
+    const lockedPath = window.location.pathname + window.location.search
+    const lockedState = { ...(window.history.state || {}), scudoProfileRequired: true }
+    window.history.replaceState(lockedState, '', lockedPath)
+    window.history.pushState(lockedState, '', lockedPath)
+
+    const keepSetupOpen = () => {
+      window.history.pushState(lockedState, '', lockedPath)
+    }
+    window.addEventListener('popstate', keepSetupOpen)
+    return () => window.removeEventListener('popstate', keepSetupOpen)
+  }, [required])
 }
 
 function useMotionSystem(route) {
@@ -557,6 +574,7 @@ function ProductPage({ product, wishlist, onToggleWishlist, onAddToCart }) {
   const [quantity, setQuantity] = useState(1)
   const [addState, setAddState] = useState('idle')
   const wished = wishlist.includes(product.id)
+  const maxQuantity = Math.max(1, Math.min(5, Number(product.inventory || 0)))
 
   useEffect(() => {
     setSize('')
@@ -597,7 +615,7 @@ function ProductPage({ product, wishlist, onToggleWishlist, onAddToCart }) {
           {!size && <span className="selection-note">Select a size to add this piece.</span>}
         </div>
         <div className="add-row">
-          <div className="quantity-control"><button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button type="button" onClick={() => setQuantity(Math.min(product.inventory || 1, quantity + 1))} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div>
+          <div className="quantity-control"><button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Icon name="minus" size={15} /></button><span>{quantity}</span><button type="button" onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))} disabled={quantity >= maxQuantity} aria-label="Increase quantity"><Icon name="plus" size={15} /></button></div>
           <button type="button" className="button button-dark add-to-bag" onClick={add} disabled={!size || product.isSoldOut}>{product.isSoldOut ? 'Sold out' : !size ? 'Select a size' : 'Add to bag'} <Icon name="arrow" size={16} /></button>
           <button type="button" className={`icon-button detail-wishlist ${wished ? 'is-active' : ''}`} onClick={() => onToggleWishlist(product.id)} aria-label={wished ? 'Remove from wishlist' : 'Add to wishlist'}><Icon name="heart" /></button>
         </div>
@@ -621,7 +639,7 @@ function CartDrawer({ open, onClose, cart, onUpdateQuantity, onRemove, onCheckou
   return open ? <div className="drawer-overlay" onClick={onClose}><aside className="cart-drawer" ref={drawerRef} onClick={(event) => event.stopPropagation()} aria-label="Shopping bag"><div className="drawer-head"><div><span className="eyebrow">Your rotation</span><h2>Shopping bag <small>{cart.reduce((a, i) => a + i.quantity, 0)}</small></h2></div><button className="icon-button" onClick={onClose} aria-label="Close shopping bag"><Icon name="close" /></button></div>{cart.length ? <><div className="drawer-items">{cart.map((item) => <CartLine key={`${item.product.id}-${item.size}-${item.color}`} item={item} onUpdateQuantity={onUpdateQuantity} onRemove={onRemove} compact />)}</div><div className="drawer-summary"><div><span>Subtotal</span><strong>{formatMoney(subtotal)}</strong></div><p>Flat ₹50 shipping. Verified product or delivery issues must be reported within 48 hours.</p><button className="button button-dark" onClick={onCheckout}>Go to checkout <Icon name="arrow" size={16} /></button><Link to="/cart" className="text-link" onClick={onClose}>View bag</Link></div></> : <EmptyState title="Your bag is empty" copy="Add a piece and it will show up here." action={<Link to="/shop" className="button button-dark" onClick={onClose}>Shop the rotation</Link>} />}</aside></div> : null
 }
 
-function CartLine({ item, onUpdateQuantity, onRemove, compact = false }) { const price = item.product.salePrice || item.product.price; return <div className={`cart-line ${compact ? 'cart-line--compact' : ''}`}><CatalogImage src={item.product.images[0]} alt={item.product.name} sizes="155px" /><div className="cart-line-info"><Link to={`/product/${item.product.slug}`}>{item.product.name}</Link><span>{item.color} / {item.size}</span><strong>{formatMoney(price * item.quantity)}</strong><div className="mini-quantity"><button onClick={() => onUpdateQuantity(item.key, item.quantity - 1)} aria-label="Decrease quantity"><Icon name="minus" size={12} /></button><span>{item.quantity}</span><button onClick={() => onUpdateQuantity(item.key, item.quantity + 1)} aria-label="Increase quantity"><Icon name="plus" size={12} /></button></div></div><button className="remove-line" onClick={() => onRemove(item.key)} aria-label={`Remove ${item.product.name}`}><Icon name="close" size={15} /></button></div> }
+function CartLine({ item, onUpdateQuantity, onRemove, compact = false }) { const price = item.product.salePrice || item.product.price; const maxQuantity = Math.min(5, Number(item.product.inventory || 0)); return <div className={`cart-line ${compact ? 'cart-line--compact' : ''}`}><CatalogImage src={item.product.images[0]} alt={item.product.name} sizes="155px" /><div className="cart-line-info"><Link to={`/product/${item.product.slug}`}>{item.product.name}</Link><span>{item.color} / {item.size}</span><strong>{formatMoney(price * item.quantity)}</strong><div className="mini-quantity"><button onClick={() => onUpdateQuantity(item.key, item.quantity - 1)} aria-label="Decrease quantity"><Icon name="minus" size={12} /></button><span>{item.quantity}</span><button onClick={() => onUpdateQuantity(item.key, item.quantity + 1)} disabled={item.quantity >= maxQuantity} aria-label="Increase quantity"><Icon name="plus" size={12} /></button></div></div><button className="remove-line" onClick={() => onRemove(item.key)} aria-label={`Remove ${item.product.name}`}><Icon name="close" size={15} /></button></div> }
 
 function CartPage({ cart, onUpdateQuantity, onRemove, onCheckout }) {
   const subtotal = cart.reduce((total, item) => total + (item.product.salePrice || item.product.price) * item.quantity, 0)
@@ -652,6 +670,21 @@ function CheckoutPage({ cart, account, onPlaceOrder }) {
   const subtotal = cart.reduce((total, item) => total + (item.product.salePrice || item.product.price) * item.quantity, 0)
   const shipping = subtotal > 0 ? SHIPPING_CHARGE : 0
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+  useEffect(() => {
+    if (!account?.uid) return
+    setForm((current) => ({
+      ...current,
+      name: account.name || current.name,
+      email: account.email || '',
+      phone: account.phone || current.phone,
+      address: account.address || current.address,
+      address2: account.address2 || current.address2,
+      landmark: account.landmark || current.landmark,
+      city: account.city || current.city,
+      state: account.state || current.state,
+      postal: account.postal || current.postal
+    }))
+  }, [account?.uid])
   useEffect(() => { const button = document.querySelector('.place-order'); if (button) button.dataset.status = placing ? 'processing' : 'idle' }, [placing])
   const buttonLabel = stage === 'creating' ? 'Creating secure order…' : stage === 'awaiting' ? 'Complete payment in Razorpay…' : stage === 'verifying' ? 'Verifying payment…' : 'Pay securely with Razorpay'
   const validateAndPlace = async () => {
@@ -677,13 +710,13 @@ function CheckoutPage({ cart, account, onPlaceOrder }) {
     }
   }
   const submit = (event) => { event.preventDefault(); validateAndPlace() }
-  return <main className="checkout-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Checkout' }]} /><div className="checkout-heading"><span className="eyebrow">Secure Razorpay checkout</span><h1>Ready when you are.</h1><p>Your saved delivery details are ready below. Your total is recalculated on our server before Razorpay opens, and Scudo never receives or stores your card, UPI PIN, or banking credentials.</p></div>{!cart.length ? <EmptyState title="Your bag is empty" copy="Add something before checking out." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} /> : <form className="checkout-layout" onSubmit={submit}><div className="checkout-form"><FormSection title="Contact"><div className="form-grid"><Field label="Full name" value={form.name} onChange={(v) => update('name', v)} required autoComplete="name" /><Field label="Email address" type="email" value={form.email} onChange={(v) => update('email', v)} required autoComplete="email" /><Field label="Phone number" type="tel" value={form.phone} onChange={(v) => update('phone', v)} required autoComplete="tel" inputMode="tel" maxLength={24} /></div></FormSection><FormSection title="Delivery address"><div className="form-grid"><Field label="House number and street" value={form.address} onChange={(v) => update('address', v)} required wide autoComplete="address-line1" maxLength={220} /><Field label="Apartment, area or floor" value={form.address2} onChange={(v) => update('address2', v)} wide autoComplete="address-line2" maxLength={120} /><Field label="Landmark (optional)" value={form.landmark} onChange={(v) => update('landmark', v)} wide maxLength={120} /><Field label="City" value={form.city} onChange={(v) => update('city', v)} required autoComplete="address-level2" maxLength={80} /><Field label="State" value={form.state} onChange={(v) => update('state', v)} required autoComplete="address-level1" maxLength={80} /><Field label="Country" value={form.country} onChange={(v) => update('country', v)} required autoComplete="country-name" readOnly /><Field label="PIN code" value={form.postal} onChange={(v) => update('postal', v.replace(/\D/g, '').slice(0, 6))} required autoComplete="postal-code" inputMode="numeric" maxLength={6} /></div></FormSection><FormSection title="Payment"><div className="payment-note payment-note--secure"><span className="payment-badge">RAZORPAY</span><p><strong>Choose UPI, card, wallet, or net banking securely in Razorpay Checkout.</strong><br />Payment is accepted only after server-side signature and captured-status verification.</p></div></FormSection><label className="checkbox-row"><input type="checkbox" checked={form.terms} onChange={(e) => update('terms', e.target.checked)} /><span>I agree to the <Link to="/terms">terms</Link>, <Link to="/returns">return policy</Link>, and <Link to="/privacy">privacy policy</Link>.</span></label>{error && <p className="form-error form-error--block" role="alert">{error}</p>}<button className="button button-dark place-order" type="submit" disabled={placing} aria-busy={placing}>{buttonLabel} <Icon name="arrow" size={16} /></button></div><OrderSummary subtotal={subtotal} shipping={shipping} checkoutLabel={buttonLabel} onCheckout={validateAndPlace} disabled={placing} /></form>}</div></main>
+  return <main className="checkout-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Checkout' }]} /><div className="checkout-heading"><span className="eyebrow">Secure Razorpay checkout</span><h1>Ready when you are.</h1><p>Your saved delivery details are ready below. Your total is recalculated on our server before Razorpay opens, and Scudo never receives or stores your card, UPI PIN, or banking credentials.</p></div>{!account ? <EmptyState title="Sign in to check out" copy="Your verified account protects the order and delivery details tied to this payment." action={<Link to="/account" className="button button-dark">Go to account</Link>} /> : !cart.length ? <EmptyState title="Your bag is empty" copy="Add something before checking out." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} /> : <form className="checkout-layout" onSubmit={submit}><div className="checkout-form"><FormSection title="Contact"><div className="form-grid"><Field label="Full name" value={form.name} onChange={(v) => update('name', v)} required autoComplete="name" /><Field label="Email address" type="email" value={form.email} onChange={(v) => update('email', v)} required autoComplete="email" readOnly /><Field label="Phone number" type="tel" value={form.phone} onChange={(v) => update('phone', v)} required autoComplete="tel" inputMode="tel" maxLength={24} /></div></FormSection><FormSection title="Delivery address"><div className="form-grid"><Field label="House number and street" value={form.address} onChange={(v) => update('address', v)} required wide autoComplete="address-line1" maxLength={220} /><Field label="Apartment, area or floor" value={form.address2} onChange={(v) => update('address2', v)} wide autoComplete="address-line2" maxLength={120} /><Field label="Landmark (optional)" value={form.landmark} onChange={(v) => update('landmark', v)} wide maxLength={120} /><Field label="City" value={form.city} onChange={(v) => update('city', v)} required autoComplete="address-level2" maxLength={80} /><Field label="State" value={form.state} onChange={(v) => update('state', v)} required autoComplete="address-level1" maxLength={80} /><Field label="Country" value={form.country} onChange={(v) => update('country', v)} required autoComplete="country-name" readOnly /><Field label="PIN code" value={form.postal} onChange={(v) => update('postal', v.replace(/\D/g, '').slice(0, 6))} required autoComplete="postal-code" inputMode="numeric" maxLength={6} /></div></FormSection><FormSection title="Payment"><div className="payment-note payment-note--secure"><span className="payment-badge">RAZORPAY</span><p><strong>Choose UPI, card, wallet, or net banking securely in Razorpay Checkout.</strong><br />Payment is accepted only after server-side signature and captured-status verification.</p></div></FormSection><label className="checkbox-row"><input type="checkbox" checked={form.terms} onChange={(e) => update('terms', e.target.checked)} /><span>I agree to the <Link to="/terms">terms</Link>, <Link to="/returns">return policy</Link>, and <Link to="/privacy">privacy policy</Link>.</span></label>{error && <p className="form-error form-error--block" role="alert">{error}</p>}<button className="button button-dark place-order" type="submit" disabled={placing} aria-busy={placing}>{buttonLabel} <Icon name="arrow" size={16} /></button></div><OrderSummary subtotal={subtotal} shipping={shipping} checkoutLabel={buttonLabel} onCheckout={validateAndPlace} disabled={placing} /></form>}</div></main>
 }
 
 function FormSection({ title, children }) { return <section className="form-section"><h2>{title}</h2>{children}</section> }
 function Field({ label, type = 'text', value, onChange, required, wide, autoComplete, inputMode, maxLength, placeholder, readOnly = false }) { return <label className={`field ${wide ? 'field--wide' : ''}`}><span>{label}{required && ' *'}</span><input type={type} value={value} onChange={(e) => onChange(e.target.value)} required={required} autoComplete={autoComplete} inputMode={inputMode} maxLength={maxLength} placeholder={placeholder} readOnly={readOnly} /></label> }
 
-function OrderConfirmation({ order }) { const paid = order?.payment?.status === 'Paid'; const processing = order?.payment?.status === 'Processing'; return <main className="confirmation-page"><div className="confirmation-card"><div className="confirmation-mark"><Icon name={paid ? 'check' : 'chevron'} size={26} /></div><span className="eyebrow">Order received / {order?.number || 'SC-PENDING'}</span><h1>{paid ? 'Payment confirmed.' : 'Payment received.'}</h1><p>{paid ? 'Razorpay verified and captured your payment securely.' : processing ? 'Your payment signature is verified and Razorpay is completing capture. Do not submit another payment for this order.' : 'Your order is being reviewed.'} Report verified damaged, defective, incorrect, or missing-item issues within 48 hours of delivery.</p><div className="confirmation-meta"><div><span>Payment status</span><strong>{order?.payment?.status || 'Processing'}</strong></div><div><span>Estimated delivery</span><strong>4–15 business days after capture</strong></div><div><span>Ship to</span><strong>{order?.city || 'Your city'}, {order?.country || 'India'}</strong></div></div><Link to="/shop" className="button button-dark">Continue shopping <Icon name="arrow" size={16} /></Link></div></main> }
+function OrderConfirmation({ order }) { if (!order) return <main className="confirmation-page"><EmptyState title="No order to confirm" copy="Complete checkout while signed in to view an order confirmation." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} /></main>; const paid = order.payment?.status === 'Paid'; const processing = order.payment?.status === 'Processing'; return <main className="confirmation-page"><div className="confirmation-card"><div className="confirmation-mark"><Icon name={paid ? 'check' : 'chevron'} size={26} /></div><span className="eyebrow">Order received / {order.number || 'SC-PENDING'}</span><h1>{paid ? 'Payment confirmed.' : 'Payment received.'}</h1><p>{paid ? 'Razorpay verified and captured your payment securely.' : processing ? 'Your payment signature is verified and Razorpay is completing capture. Do not submit another payment for this order.' : 'Your order is being reviewed.'} Report verified damaged, defective, incorrect, or missing-item issues within 48 hours of delivery.</p><div className="confirmation-meta"><div><span>Payment status</span><strong>{order.payment?.status || 'Processing'}</strong></div><div><span>Estimated delivery</span><strong>4–15 business days after capture</strong></div><div><span>Ship to</span><strong>{order.city || 'Your city'}, {order.country || 'India'}</strong></div></div><Link to="/shop" className="button button-dark">Continue shopping <Icon name="arrow" size={16} /></Link></div></main> }
 
 function WishlistPage({ wishlist, onToggleWishlist, onQuickAdd }) { const wished = products.filter((product) => wishlist.includes(product.id)); return <main className="shop-page wishlist-page"><div className="page-shell"><Breadcrumbs items={[{ label: 'Wishlist' }]} /><div className="shop-heading"><div><span className="eyebrow">Saved for later</span><h1>Your wishlist</h1></div><p>{wished.length ? `${wished.length} pieces saved.` : 'Keep the good ones close.'}</p></div>{wished.length ? <div className="product-grid product-grid--four">{wished.map((product) => <ProductCard key={product.id} product={product} onQuickAdd={onQuickAdd} wishlist={wishlist} onToggleWishlist={onToggleWishlist} />)}</div> : <EmptyState title="Your list is quiet" copy="Tap the heart on a piece to save it for later." action={<Link to="/shop" className="button button-dark">Shop the rotation</Link>} />}</div></main> }
 
@@ -1311,7 +1344,7 @@ function DeliveryProfileSetup({ account, onSave }) {
         </div>
         {error && <p className="form-error form-error--block" role="alert">{error}</p>}
         <button className="button button-dark profile-setup-submit" type="submit" disabled={status === 'saving'} aria-busy={status === 'saving'}>{status === 'saving' ? 'Saving delivery details…' : 'Save & continue'} <Icon name={status === 'saved' ? 'check' : 'arrow'} size={16} /></button>
-        <p className="profile-setup-privacy">Your details are linked to your signed-in account and used for checkout, delivery, and order support. Read our <Link to="/privacy">privacy policy</Link>.</p>
+        <p className="profile-setup-privacy">Your details are linked to your signed-in account and used for checkout, delivery, and order support. Read our <Link to="/privacy" target="_blank" rel="noreferrer">privacy policy</Link>.</p>
       </form>
     </section>
   </div>, document.body)
@@ -1682,17 +1715,19 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false)
   const [cartOpen, setCartOpen] = useState(false)
   const [authPrompt, setAuthPrompt] = useState(false)
-  const [profileSetupOpen, setProfileSetupOpen] = useState(false)
+  const [, setProfileSetupOpen] = useState(false)
   const [pendingAdd, setPendingAdd] = useState(null)
   const [order, setOrder] = usePersistedState('scudo-last-order', null)
+  const profileRequired = Boolean(path !== '/admin' && account?.uid && !isCustomerProfileComplete(account))
+  useRequiredProfileGuard(profileRequired)
   const applyCatalog = (catalog) => {
     const available = catalog.filter((product) => product.status !== 'archived' && product.visible !== false)
-    if (!available.length) return
     replaceCatalogProducts(available)
     setCatalogRevision((value) => value + 1)
     setCart((current) => current.flatMap((item) => {
       const product = available.find((candidate) => candidate.id === item.product?.id)
-      return product ? [{ ...item, product }] : []
+      const quantity = Math.min(item.quantity, 5, Number(product?.inventory || 0))
+      return product && quantity > 0 ? [{ ...item, product, quantity }] : []
     }))
   }
   useEffect(() => {
@@ -1705,6 +1740,7 @@ export default function App() {
     const unsubscribe = watchFirebaseAuth(async (firebaseProfile) => {
       if (!active) return
       if (!firebaseProfile) {
+        setOrder(null)
         setAccount(null)
         setProfileSetupOpen(false)
         setAuthReady(true)
@@ -1728,7 +1764,7 @@ export default function App() {
   }, [])
   useEffect(() => { document.title = path === '/' ? 'Scudo Clothing — Football-inspired streetwear' : `${path.replace('/', '').replaceAll('/', ' / ')} — Scudo Clothing` }, [route, path])
   const toggleWishlist = (id) => setWishlist((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
-  const addToCartNow = (product, size, color, quantity = 1) => { const key = `${product.id}-${size}-${color}`; setCart((current) => { const existing = current.find((item) => item.key === key); return existing ? current.map((item) => item.key === key ? { ...item, quantity: item.quantity + quantity } : item) : [...current, { key, product, size, color, quantity }] }); setCartOpen(true); return 'added' }
+  const addToCartNow = (product, size, color, quantity = 1) => { const key = `${product.id}-${size}-${color}`; const maxQuantity = Math.min(5, Number(product.inventory || 0)); if (maxQuantity < 1) return 'sold-out'; setCart((current) => { const existing = current.find((item) => item.key === key); return existing ? current.map((item) => item.key === key ? { ...item, quantity: Math.min(maxQuantity, item.quantity + quantity) } : item) : [...current, { key, product, size, color, quantity: Math.min(maxQuantity, quantity) }] }); setCartOpen(true); return 'added' }
   const finishPendingAdd = () => { if (pendingAdd) { addToCartNow(pendingAdd.product, pendingAdd.size, pendingAdd.color, pendingAdd.quantity); setPendingAdd(null) } }
   const addToCart = (product, size, color, quantity = 1) => {
     if (!account || !isCustomerProfileComplete(account)) {
@@ -1741,6 +1777,7 @@ export default function App() {
   }
   const authenticate = async (firebaseProfile) => {
     setAuthPrompt(false)
+    if (order?.ownerUid && order.ownerUid !== firebaseProfile.uid) setOrder(null)
     const profile = await loadCustomerProfile(firebaseProfile)
     setAccount(profile)
     if (!isCustomerProfileComplete(profile)) {
@@ -1750,7 +1787,7 @@ export default function App() {
     finishPendingAdd()
     return profile
   }
-  const logout = async () => { await signOutFirebase(); setAccount(null); setProfileSetupOpen(false); setPendingAdd(null) }
+  const logout = async () => { const uid = account?.uid; await signOutFirebase(); clearCustomerProfileCache(uid); setOrder(null); setAccount(null); setProfileSetupOpen(false); setPendingAdd(null) }
   const saveProfile = async (details) => {
     const firebaseProfile = await updateFirebaseProfile({ name: details.name })
     const profile = await saveCustomerProfile(firebaseProfile, details)
@@ -1766,11 +1803,12 @@ export default function App() {
   const sendPasswordReset = () => sendFirebasePasswordReset(account?.email)
   const sendVerification = () => sendFirebaseVerificationEmail()
   const closeAuthPrompt = () => { setAuthPrompt(false); setPendingAdd(null) }
-  const updateQuantity = (key, quantity) => setCart((current) => quantity < 1 ? current.filter((item) => item.key !== key) : current.map((item) => item.key === key ? { ...item, quantity } : item))
+  const updateQuantity = (key, quantity) => setCart((current) => quantity < 1 ? current.filter((item) => item.key !== key) : current.map((item) => item.key === key ? { ...item, quantity: Math.min(quantity, 5, Number(item.product.inventory || 0)) } : item).filter((item) => item.quantity > 0))
   const removeCartItem = (key) => setCart((current) => current.filter((item) => item.key !== key))
   const quickAdd = (product) => { if (!product.isSoldOut) return addToCart(product, product.sizes[0], product.colors[0], 1); return 'sold-out' }
-  const placeOrder = (data) => { const nextOrder = { ...data, number: data.number || `SC-${Date.now().toString().slice(-6)}`, createdAt: new Date().toISOString() }; setOrder(nextOrder); setCart([]); navigate('/order-confirmation') }
+  const placeOrder = (data) => { const nextOrder = { ...data, ownerUid: account?.uid, number: data.number || `SC-${Date.now().toString().slice(-6)}`, createdAt: new Date().toISOString() }; setOrder(nextOrder); setCart([]); navigate('/order-confirmation') }
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0)
+  const visibleOrder = account?.uid && order?.ownerUid === account.uid ? order : null
   let content
   if (path === '/') content = <HomePage wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
   else if (path === '/shop') content = <ShopPage wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
@@ -1781,7 +1819,7 @@ export default function App() {
     const category = products.find((product) => categorySlug(product.category) === slug)?.category || slug.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
     content = <ShopPage initialCategory={category} wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
   }
-  else if (path.startsWith('/product/')) content = <ProductPage product={products.find((item) => item.slug === path.split('/').pop()) || products[0]} wishlist={wishlist} onToggleWishlist={toggleWishlist} onAddToCart={addToCart} />
+  else if (path.startsWith('/product/')) { const product = products.find((item) => item.slug === path.split('/').pop()); content = product ? <ProductPage product={product} wishlist={wishlist} onToggleWishlist={toggleWishlist} onAddToCart={addToCart} /> : <main className="shop-page"><div className="page-shell"><EmptyState title="Product not found" copy="This product may have moved or is no longer available." action={<Link to="/shop" className="button button-dark">Browse the shop</Link>} /></div></main> }
   else if (path === '/collections') content = <CollectionsPage />
   else if (path === '/about') content = <InfoPage type="about" />
   else if (path === '/size-guide') content = <InfoPage type="size-guide" />
@@ -1793,11 +1831,11 @@ export default function App() {
   else if (path === '/wishlist') content = <WishlistPage wishlist={wishlist} onToggleWishlist={toggleWishlist} onQuickAdd={quickAdd} />
   else if (path === '/cart') content = <CartPage cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => navigate('/checkout')} />
   else if (path === '/checkout') content = <CheckoutPage cart={cart} account={account} onPlaceOrder={placeOrder} />
-  else if (path === '/order-confirmation') content = <OrderConfirmation order={order} />
-  else if (path === '/account') content = <AccountPage account={account} order={order} onAuthenticate={authenticate} onLogout={logout} />
-  else if (path === '/orders') content = <OrdersPage account={account} order={order} />
+  else if (path === '/order-confirmation') content = <OrderConfirmation order={visibleOrder} />
+  else if (path === '/account') content = <AccountPage account={account} order={visibleOrder} onAuthenticate={authenticate} onLogout={logout} />
+  else if (path === '/orders') content = <OrdersPage account={account} order={visibleOrder} />
   else if (path === '/settings') content = <SettingsPage account={account} onSaveProfile={saveProfile} onSendPasswordReset={sendPasswordReset} onSendVerification={sendVerification} onLogout={logout} />
   else if (path === '/admin') content = <AdminPage account={account} authReady={authReady} onAuthenticate={authenticate} onLogout={logout} onCatalogChanged={applyCatalog} />
   else content = <InfoPage type="about" />
-  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><span className="scroll-progress" aria-hidden="true" /><Header cartCount={cartCount} wishlistCount={wishlist.length} account={account} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{profileSetupOpen && path !== '/admin' && account && !showIntro && <DeliveryProfileSetup account={account} onSave={completeProfileSetup} />}{showIntro && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
+  return <div className={`app ${showIntro ? 'app--intro' : ''}`}><span className="scroll-progress" aria-hidden="true" /><Header cartCount={cartCount} wishlistCount={wishlist.length} account={account} onCartOpen={() => setCartOpen(true)} />{content}<Footer /><CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} cart={cart} onUpdateQuantity={updateQuantity} onRemove={removeCartItem} onCheckout={() => { setCartOpen(false); navigate('/checkout') }} />{authPrompt && <AuthGate onClose={closeAuthPrompt} onAuthenticated={authenticate} />}{profileRequired && <DeliveryProfileSetup account={account} onSave={completeProfileSetup} />}{showIntro && !profileRequired && <BrandIntro onComplete={() => setShowIntro(false)} />}</div>
 }

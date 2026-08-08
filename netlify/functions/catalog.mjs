@@ -4,7 +4,7 @@ import { handleError, HttpError, json } from './_lib/http.mjs'
 export default async (request) => {
   try {
     if (request.method !== 'GET') throw new HttpError(405, 'METHOD_NOT_ALLOWED', 'Only GET requests are accepted.')
-    const products = (await listCatalogProducts()).map(publicCatalogProduct)
+    const products = (await listCatalogProducts({ availability: true })).map(publicCatalogProduct)
     return json(200, { products, generatedAt: new Date().toISOString() }, { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=60' })
   } catch (error) {
     return handleError(error)

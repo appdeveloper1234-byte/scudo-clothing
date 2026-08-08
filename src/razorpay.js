@@ -1,3 +1,5 @@
+import { getFirebaseIdToken } from './firebaseAuth.js'
+
 const CHECKOUT_SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js'
 let scriptPromise
 
@@ -9,12 +11,17 @@ export class PaymentFlowError extends Error {
   }
 }
 
-async function requestJson(path, payload) {
+async function requestJson(path, payload, { token, idempotencyKey } = {}) {
   let response
   try {
     response = await fetch(path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+        ...(idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : {})
+      },
       body: JSON.stringify(payload),
       credentials: 'same-origin'
     })
@@ -73,20 +80,23 @@ const wait = (milliseconds) => new Promise((resolve) => window.setTimeout(resolv
 export async function payWithRazorpay({ cart, customer, termsAccepted, onStage = () => {} }) {
   onStage('creating')
   const items = cart.map((item) => ({ productId: item.product.id, size: item.size, color: item.color, quantity: item.quantity }))
+  const idempotencyKey = window.crypto.randomUUID()
+  const tokenPromise = getFirebaseIdToken(true)
   const [{ data: order }, Razorpay] = await Promise.all([
-    requestJson('/api/payments/order', { items, customer, termsAccepted }),
+    tokenPromise.then((token) => requestJson('/api/payments/order', { items, customer, termsAccepted }, { token, idempotencyKey })),
     loadRazorpayCheckout()
   ])
   onStage('awaiting')
   const payment = await openCheckout(Razorpay, order, customer)
   onStage('verifying')
   let verification
+  const token = await tokenPromise
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const result = await requestJson('/api/payments/verify', {
       orderId: order.orderId,
       paymentId: payment.razorpay_payment_id,
       signature: payment.razorpay_signature
-    })
+    }, { token })
     verification = result.data
     if (result.status === 200 && verification?.paid) return verification
     if (attempt < 3) await wait(1200)

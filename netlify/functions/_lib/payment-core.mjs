@@ -56,6 +56,7 @@ export function calculateOrder(inputItems, catalogProducts = products) {
 
   const productById = new Map(catalogProducts.map((product) => [product.id, product]))
   const consolidated = new Map()
+  const requestedByProduct = new Map()
   for (const input of inputItems) {
     if (!input || typeof input !== 'object') throw new PaymentInputError('A bag item is invalid.')
     const productId = requiredText(input.productId, 'Product', 80)
@@ -66,6 +67,11 @@ export function calculateOrder(inputItems, catalogProducts = products) {
     const quantity = Number(input.quantity)
     if (!product.sizes.includes(size) || !product.colors.includes(color)) throw new PaymentInputError('A selected product option is invalid.')
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY_PER_LINE) throw new PaymentInputError('Item quantity must be between 1 and 5.')
+    const productQuantity = (requestedByProduct.get(productId) || 0) + quantity
+    if (productQuantity > product.inventory) {
+      throw new PaymentInputError(`The requested quantity for ${product.name} is unavailable.`, 'INSUFFICIENT_STOCK', 409)
+    }
+    requestedByProduct.set(productId, productQuantity)
     const key = `${productId}|${size}|${color}`
     const previous = consolidated.get(key)
     const combinedQuantity = (previous?.quantity || 0) + quantity

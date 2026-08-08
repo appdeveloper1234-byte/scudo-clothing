@@ -1,5 +1,7 @@
 import { getStore } from '@netlify/blobs'
 import { requireAdmin } from './_lib/admin-auth.mjs'
+import { updateJsonAtomically } from './_lib/blob-cas.mjs'
+import { applyFulfilmentTransition } from './_lib/order-state.mjs'
 import { assertTrustedOrigin, handleError, HttpError, json, readJson } from './_lib/http.mjs'
 
 const ORDER_PREFIX = 'orders/'
@@ -33,7 +35,7 @@ const publicOrder = (order) => ({
 
 async function listOrders(store) {
   const { blobs } = await store.list({ prefix: ORDER_PREFIX })
-  const records = await Promise.all(blobs.slice(-250).map(({ key }) => store.get(key, { type: 'json', consistency: 'strong' })))
+  const records = await Promise.all(blobs.map(({ key }) => store.get(key, { type: 'json', consistency: 'strong' })))
   return records.filter(Boolean).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
 }
 
@@ -49,7 +51,7 @@ function dashboardPayload(orders, admin) {
       unfulfilled: paidOrders.filter((order) => !order.fulfilmentStatus || order.fulfilmentStatus === 'unfulfilled').length,
       customers: customerEmails.size
     },
-    orders: orders.map(publicOrder)
+    orders: orders.slice(0, 250).map(publicOrder)
   }
 }
 
@@ -70,16 +72,10 @@ export default async (request) => {
     if (trackingNumber.length > 100) throw new HttpError(400, 'INVALID_TRACKING', 'The tracking reference is too long.')
 
     const key = `${ORDER_PREFIX}${orderId}`
-    const order = await orders.get(key, { type: 'json', consistency: 'strong' })
-    if (!order) throw new HttpError(404, 'ORDER_NOT_FOUND', 'This order could not be found.')
-    const updated = {
-      ...order,
-      fulfilmentStatus: payload.fulfilmentStatus,
-      trackingNumber,
-      updatedAt: new Date().toISOString(),
-      updatedBy: admin.email
-    }
-    await orders.setJSON(key, updated)
+    const { value: updated } = await updateJsonAtomically(orders, key, (order) => {
+      if (!order) throw new HttpError(404, 'ORDER_NOT_FOUND', 'This order could not be found.')
+      return { value: applyFulfilmentTransition(order, payload.fulfilmentStatus, { trackingNumber, updatedBy: admin.email }) }
+    })
     return json(200, { order: publicOrder(updated), updatedAt: updated.updatedAt })
   } catch (error) {
     return handleError(error)

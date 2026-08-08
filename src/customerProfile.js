@@ -40,6 +40,11 @@ export function isCustomerProfileComplete(input) {
 const localKey = (uid) => `scudo-customer-profile-${uid}`
 const isLocalPreview = () => ['localhost', '127.0.0.1'].includes(window.location.hostname)
 
+export function clearCustomerProfileCache(uid) {
+  if (!uid) return
+  try { window.localStorage.removeItem(localKey(uid)) } catch { /* storage can be unavailable */ }
+}
+
 function readLocalProfile(uid) {
   if (!uid) return null
   try {
@@ -68,9 +73,8 @@ async function responseMessage(response, fallback) {
 
 export async function loadCustomerProfile(account) {
   if (!account?.uid) return account
-  const local = readLocalProfile(account.uid)
-
-  if (isLocalPreview()) return mergeAccount(account, local)
+  if (isLocalPreview()) return mergeAccount(account, readLocalProfile(account.uid))
+  clearCustomerProfileCache(account.uid)
 
   try {
     const token = await getFirebaseIdToken()
@@ -79,12 +83,11 @@ export async function loadCustomerProfile(account) {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
       credentials: 'same-origin'
     })
-    if (!response.ok) return mergeAccount(account, local)
+    if (!response.ok) return mergeAccount(account, null)
     const payload = await response.json()
-    if (payload.profile) writeLocalProfile(account.uid, payload.profile)
-    return mergeAccount(account, payload.profile || local)
+    return mergeAccount(account, payload.profile || null)
   } catch {
-    return mergeAccount(account, local)
+    return mergeAccount(account, null)
   }
 }
 
@@ -112,6 +115,5 @@ export async function saveCustomerProfile(account, input) {
   })
   if (!response.ok) throw new Error(await responseMessage(response, 'Your delivery details could not be saved. Please try again.'))
   const payload = await response.json()
-  writeLocalProfile(account.uid, payload.profile || profile)
   return mergeAccount(account, payload.profile || profile)
 }

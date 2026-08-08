@@ -1,6 +1,7 @@
 import { getStore } from '@netlify/blobs'
 import { products as seedProducts } from '../../../src/productCatalog.js'
 import { HttpError } from './http.mjs'
+import { catalogWithAvailability, syncInventoryCatalog } from './inventory-store.mjs'
 
 const CATALOG_STORE = 'scudo-catalog'
 const PRODUCT_PREFIX = 'products/'
@@ -89,7 +90,7 @@ function seedProduct(product) {
   }
 }
 
-export async function listCatalogProducts({ includeArchived = false } = {}) {
+export async function listCatalogProducts({ includeArchived = false, availability = false } = {}) {
   const store = getStore(CATALOG_STORE)
   const merged = new Map(seedProducts.map((product) => [product.id, seedProduct(product)]))
   const { blobs } = await store.list({ prefix: PRODUCT_PREFIX })
@@ -98,9 +99,10 @@ export async function listCatalogProducts({ includeArchived = false } = {}) {
     const base = merged.get(record.id)
     merged.set(record.id, { ...base, ...record })
   }
-  return [...merged.values()]
+  const catalog = [...merged.values()]
     .filter((product) => includeArchived || (product.status !== 'archived' && product.visible !== false))
     .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured) || String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')) || a.name.localeCompare(b.name))
+  return availability ? catalogWithAvailability(catalog) : catalog
 }
 
 export async function saveCatalogProduct(input, admin, { create = false } = {}) {
@@ -114,6 +116,7 @@ export async function saveCatalogProduct(input, admin, { create = false } = {}) 
   const duplicate = catalog.find((item) => item.id !== product.id && (item.slug === product.slug || item.sku.toLowerCase() === product.sku.toLowerCase()))
   if (duplicate) throw new HttpError(409, 'PRODUCT_EXISTS', 'Another product already uses this SKU or URL slug.')
   await store.setJSON(`${PRODUCT_PREFIX}${product.id}`, product)
+  await syncInventoryCatalog(await listCatalogProducts({ includeArchived: true }))
   return product
 }
 

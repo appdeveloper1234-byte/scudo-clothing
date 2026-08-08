@@ -103,6 +103,6 @@ export const products = [
 ]
 
 export function replaceCatalogProducts(nextProducts) {
-  if (!Array.isArray(nextProducts) || !nextProducts.length) return
+  if (!Array.isArray(nextProducts)) return
   products.splice(0, products.length, ...nextProducts)
 }

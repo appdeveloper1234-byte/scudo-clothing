@@ -10,7 +10,7 @@
     "test:payments": "node scripts/test-payment-core.mjs"
   },
   "dependencies": {
-    "@netlify/blobs": "^10.7.11",
+    "@netlify/blobs": "^10.7.12",
     "@vitejs/plugin-react": "latest",
     "firebase": "^12.17.0",
     "firebase-admin": "13.10.0",

@@ -35,13 +35,40 @@ export function assertTrustedOrigin(request) {
   if (!allowed.has(origin)) throw new HttpError(403, 'ORIGIN_NOT_ALLOWED', 'This payment request is not allowed.')
 }
 
+export async function readText(request, maxBytes = 30000, message = 'The payment request is too large.') {
+  const declaredLength = Number(request.headers.get('content-length') || 0)
+  if (declaredLength > maxBytes) throw new HttpError(413, 'PAYLOAD_TOO_LARGE', message)
+  if (!request.body?.getReader) {
+    const raw = await request.text()
+    if (new TextEncoder().encode(raw).length > maxBytes) throw new HttpError(413, 'PAYLOAD_TOO_LARGE', message)
+    return raw
+  }
+
+  const reader = request.body.getReader()
+  const decoder = new TextDecoder()
+  let bytes = 0
+  let raw = ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      bytes += value.byteLength
+      if (bytes > maxBytes) {
+        await reader.cancel().catch(() => {})
+        throw new HttpError(413, 'PAYLOAD_TOO_LARGE', message)
+      }
+      raw += decoder.decode(value, { stream: true })
+    }
+    return raw + decoder.decode()
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 export async function readJson(request, maxBytes = 30000) {
   const contentType = request.headers.get('content-type') || ''
   if (!contentType.toLowerCase().startsWith('application/json')) throw new HttpError(415, 'UNSUPPORTED_MEDIA_TYPE', 'Send payment requests as JSON.')
-  const declaredLength = Number(request.headers.get('content-length') || 0)
-  if (declaredLength > maxBytes) throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'The payment request is too large.')
-  const raw = await request.text()
-  if (new TextEncoder().encode(raw).length > maxBytes) throw new HttpError(413, 'PAYLOAD_TOO_LARGE', 'The payment request is too large.')
+  const raw = await readText(request, maxBytes)
   try { return JSON.parse(raw) } catch { throw new HttpError(400, 'INVALID_JSON', 'The payment request is invalid.') }
 }
 
@@ -87,7 +114,9 @@ export function verifyHmac(message, signature, secret) {
 }
 
 export function handleError(error) {
-  if (error instanceof HttpError || error instanceof PaymentInputError) return json(error.status || 400, { error: { code: error.code || 'INVALID_REQUEST', message: error.message } })
+  if (error instanceof HttpError || error instanceof PaymentInputError || (Number.isInteger(error?.status) && typeof error?.code === 'string')) {
+    return json(error.status || 400, { error: { code: error.code || 'INVALID_REQUEST', message: error.message } })
+  }
   console.error('Unhandled payment function error', { name: error?.name || 'Error' })
   return json(500, { error: { code: 'INTERNAL_ERROR', message: 'Secure payments are temporarily unavailable.' } })
 }
