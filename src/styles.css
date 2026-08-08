@@ -1605,15 +1605,14 @@ body.is-routing main { opacity: .08; transform: translateY(10px) scale(.995); tr
 /* Unified premium storefront system. */
 ::selection { background: var(--sand); color: var(--ink); }
 .site-header {
-  border-top: 1px solid rgba(185,168,137,.42);
-  border-bottom-color: rgba(17,17,17,.12);
+  border: 0;
   background: rgba(250,248,243,.94);
   backdrop-filter: blur(18px) saturate(1.1);
 }
 .header-inner { height: 90px; max-width: 1520px; padding-right: 34px; padding-left: 34px; }
 .header-logo {
   width: 180px;
-  border: 1px solid rgba(17,17,17,.1);
+  border: 0;
   box-shadow: 0 10px 30px rgba(17,17,17,.09);
 }
 .desktop-nav { left: 82px; gap: clamp(18px, 2.2vw, 34px); }
